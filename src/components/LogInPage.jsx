@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -10,31 +12,86 @@ import { Input } from "components/ui/input";
 import { Button } from "components/ui/button";
 import { Leaf, Eye, EyeOff } from "lucide-react";
 
-const LoginPage = async ({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  loginError,
-  handleLogin,
-}) => {
+const LoginPage = ({ initialEmail = "" }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const checkedRef = useRef(false);
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState(null);
 
-  // ...existing code...
-  const res = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (res.ok) {
-    const user = await res.json();
-    // update client state, redirect to dashboard
-  } else {
-    const err = await res.json();
-    // show error
-  }
-  // ...existing code...
+  // Redirect away from login if already authenticated — only when actually on /login
+  useEffect(() => {
+    // run only on the actual /login route and only once
+    if (pathname !== "/login") return;
+    if (checkedRef.current) return;
+    checkedRef.current = true;
+
+    (async () => {
+      try {
+        // cheap session flag to avoid re-check storms
+        if (sessionStorage.getItem("signedIn") === "1") {
+          router.replace("/dashboard");
+          return;
+        }
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (res.ok) {
+          sessionStorage.setItem("signedIn", "1");
+          router.replace("/dashboard");
+        }
+      } catch (e) {
+        // not authenticated -> stay on login
+      }
+    })();
+  }, [pathname, router]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setLoginError(null);
+
+    try {
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // ensure cookie is accepted by browser
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!loginRes.ok) {
+        const err = await loginRes
+          .json()
+          .catch(() => ({ error: "Login failed" }));
+        setLoginError(err.error || "Login failed");
+        setLoading(false);
+        return;
+      }
+
+      // Confirm auth by calling /api/auth/me (no cache) before redirecting
+      const meRes = await fetch("/api/auth/me", {
+        method: "GET",
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (meRes.ok) {
+        router.replace("/dashboard");
+      } else {
+        setLoginError(
+          "Login succeeded but verification failed. Check cookies or server logs."
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setLoginError("Network error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-[#1f2937]">
@@ -69,9 +126,6 @@ const LoginPage = async ({
             <div className="flex items-center justify-center mb-4">
               <Leaf className="h-12 w-12 text-[#14532d]" />
             </div>
-            <h1 className="text-2xl font-bold text-[#f7f7f1]">
-              Jasaan AgriTech Hub
-            </h1>
             <p className="text-[#b8b89d]">Agricultural Management System</p>
           </div>
 
@@ -150,6 +204,10 @@ const LoginPage = async ({
                     Show Password
                   </label>
                 </div>
+
+                {loginError && (
+                  <div className="text-sm text-red-400">{loginError}</div>
+                )}
 
                 <Button
                   type="submit"

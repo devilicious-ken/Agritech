@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from "react";
+"use client";
+import React, { useEffect, useRef, useState } from "react";
+import * as echarts from "echarts";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "components/ui/card";
 import {
   Table,
@@ -8,11 +11,23 @@ import {
   TableHeader,
   TableRow,
 } from "components/ui/table";
-import * as echarts from "echarts";
 
 const DashboardPage = ({ isSidebarCollapsed }) => {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [selectedArea, setSelectedArea] = useState(null);
   const [modalType, setModalType] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  const genderRef = useRef(null);
+  const productionRef = useRef(null);
+  const registrationRef = useRef(null);
+  const cropsRef = useRef(null);
+  const animalsRef = useRef(null);
+
+  // store instances so we don't re-init repeatedly
+  const instancesRef = useRef({});
 
   const detailedData = {
     "Upper Jasaan": {
@@ -198,6 +213,48 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
       },
     },
   };
+
+  // fetch current user for welcome message
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        console.debug("[DashboardPage] fetching /api/auth/me");
+        const res = await fetch("/api/auth/me", {
+          credentials: "include",
+          cache: "no-store",
+        });
+        console.debug("[DashboardPage] /api/auth/me status:", res.status);
+        if (res.status === 401 || res.status === 403) {
+          // explicit unauthenticated -> redirect to login
+          console.debug("[DashboardPage] not authenticated -> redirect /login");
+          router.replace("/login");
+          return;
+        }
+        if (!res.ok) {
+          // other server error: stay on page and show console error (avoid redirect loops)
+          console.error(
+            "[DashboardPage] unexpected /api/auth/me response:",
+            res.status
+          );
+          return;
+        }
+        const data = await res.json();
+        if (mounted) setUser(data.user || null);
+        // show welcome modal once when user successfully fetched
+        setShowWelcome(true);
+        // auto close after 4 seconds
+        setTimeout(() => setShowWelcome(false), 4000);
+      } catch (err) {
+        console.error("[DashboardPage] fetch error:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [router]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -666,24 +723,157 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
       genderChart.resize();
       productionChart.resize();
       registrationChart.resize();
-      cropsChart.resize();
-      animalsChart.resize();
+      const cropsChartEl = document.getElementById("cropsChart");
+      const animalsChartEl = document.getElementById("animalsChart");
+      if (cropsChartEl) echarts.getInstanceByDom(cropsChartEl)?.resize();
+      if (animalsChartEl) echarts.getInstanceByDom(animalsChartEl)?.resize();
     };
 
     window.addEventListener("resize", handleResize);
 
     return () => {
       window.removeEventListener("resize", handleResize);
-      genderChart.dispose();
-      productionChart.dispose();
-      registrationChart.dispose();
-      cropsChart.dispose();
-      animalsChart.dispose();
+      try {
+        genderChart.dispose();
+      } catch {}
+      try {
+        productionChart.dispose();
+      } catch {}
+      try {
+        registrationChart.dispose();
+      } catch {}
+      try {
+        echarts
+          .getInstanceByDom(document.getElementById("cropsChart"))
+          ?.dispose();
+      } catch {}
+      try {
+        echarts
+          .getInstanceByDom(document.getElementById("animalsChart"))
+          ?.dispose();
+      } catch {}
     };
   };
 
+  // try init now and again after a short delay (handles async rendering)
+  useEffect(() => {
+    let mounted = true;
+
+    const initIfReady = () => {
+      // initialize each chart only when its container exists and not already initialized
+      try {
+        if (mounted && genderRef.current && !instancesRef.current.gender) {
+          instancesRef.current.gender = echarts.init(genderRef.current);
+          instancesRef.current.gender.setOption(genderOption);
+        }
+
+        if (
+          mounted &&
+          productionRef.current &&
+          !instancesRef.current.production
+        ) {
+          instancesRef.current.production = echarts.init(productionRef.current);
+          instancesRef.current.production.setOption(productionOption);
+          instancesRef.current.production.on &&
+            instancesRef.current.production.on("click", (p) => {
+              if (p.seriesName === "Crops") {
+                setSelectedArea(p.name);
+                setModalType("crops");
+              }
+              if (p.seriesName === "Animals") {
+                setSelectedArea(p.name);
+                setModalType("animals");
+              }
+            });
+        }
+
+        if (
+          mounted &&
+          registrationRef.current &&
+          !instancesRef.current.registration
+        ) {
+          instancesRef.current.registration = echarts.init(
+            registrationRef.current
+          );
+          instancesRef.current.registration.setOption(registrationOption);
+        }
+
+        if (mounted && cropsRef.current && !instancesRef.current.crops) {
+          instancesRef.current.crops = echarts.init(cropsRef.current);
+          instancesRef.current.crops.setOption(cropsOption);
+        }
+
+        if (mounted && animalsRef.current && !instancesRef.current.animals) {
+          instancesRef.current.animals = echarts.init(animalsRef.current);
+          instancesRef.current.animals.setOption(animalsOption);
+        }
+      } catch (err) {
+        console.error("ECharts init error:", err);
+      }
+    };
+
+    initIfReady();
+    const t = setTimeout(initIfReady, 120);
+    const resizeHandler = () => {
+      Object.values(instancesRef.current).forEach(
+        (inst) => inst?.resize && inst.resize()
+      );
+    };
+    window.addEventListener("resize", resizeHandler);
+
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener("resize", resizeHandler);
+      // dispose chart instances
+      Object.values(instancesRef.current).forEach((inst) => {
+        try {
+          inst && inst.dispose && inst.dispose();
+        } catch (e) {}
+      });
+      instancesRef.current = {};
+    };
+  }, [isSidebarCollapsed]);
+
+  if (loading) return <div>Loading...</div>;
+
   return (
     <div className="p-6 space-y-6">
+      {/* Welcome modal (role-specific) */}
+      {showWelcome && user && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24">
+          <div className="bg-[#0f1724] border border-[#334155] text-white rounded-xl shadow-xl p-6 w-full max-w-lg mx-4">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <span className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-green-600 text-white text-xl">
+                  {user.role === "admin" ? "A" : "M"}
+                </span>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold">
+                  Welcome back, {user.name ?? user.email}!
+                </h3>
+                <p className="mt-1 text-sm text-gray-300">
+                  You are signed in as{" "}
+                  <span className="font-medium text-white">
+                    {user.role === "admin" ? "Administrator" : "MAO Staff"}
+                  </span>
+                  . Have a productive day.
+                </p>
+              </div>
+              <div className="ml-4">
+                <button
+                  aria-label="Close welcome"
+                  onClick={() => setShowWelcome(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="bg-[#1e1e1e] border-0 shadow-md hover:shadow-lg transition-shadow">
           <CardContent className="p-6">
@@ -768,7 +958,7 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div id="genderChart" className="h-80 w-full"></div>
+            <div ref={genderRef} style={{ width: "100%", height: 320 }} />
           </CardContent>
         </Card>
 
@@ -779,7 +969,7 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div id="productionChart" className="h-80 w-full"></div>
+            <div ref={productionRef} style={{ width: "100%", height: 320 }} />
           </CardContent>
         </Card>
       </div>
@@ -791,7 +981,7 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div id="registrationChart" className="h-80 w-full"></div>
+          <div ref={registrationRef} style={{ width: "100%", height: 260 }} />
         </CardContent>
       </Card>
 
@@ -833,7 +1023,11 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div id="cropsChart" className="h-80 w-full"></div>
+            <div
+              ref={cropsRef}
+              id="cropsChart"
+              style={{ width: "100%", height: 260 }}
+            />
           </CardContent>
         </Card>
 
@@ -844,7 +1038,11 @@ const DashboardPage = ({ isSidebarCollapsed }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div id="animalsChart" className="h-80 w-full"></div>
+            <div
+              ref={animalsRef}
+              id="animalsChart"
+              style={{ width: "100%", height: 260 }}
+            />
           </CardContent>
         </Card>
       </div>
