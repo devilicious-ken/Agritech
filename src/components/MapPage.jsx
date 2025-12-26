@@ -62,7 +62,6 @@ const MapPage = () => {
           addresses (
             barangay,
             purok,
-            street,
             municipality_city,
             province
           ),
@@ -976,5 +975,6 @@ const MapPage = () => {
     </div>
   );
 };
+
 
 export default MapPage;
