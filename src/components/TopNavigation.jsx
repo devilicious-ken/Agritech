@@ -17,6 +17,7 @@ const TopNavigation = ({
   user,
 }) => {
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { theme, setTheme } = useContext(ThemeContext);
 
   useEffect(() => {
@@ -159,7 +160,7 @@ const TopNavigation = ({
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer hover:bg-muted/20 transition-colors"
-              onClick={handleLogout}
+              onClick={() => setShowLogoutModal(true)}
             >
               <i className="fas fa-sign-out-alt mr-2 text-muted-foreground"></i>
               <span>Logout</span>
@@ -167,6 +168,35 @@ const TopNavigation = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-card text-card-foreground rounded-lg shadow-lg w-full max-w-sm p-6 border border-border animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-semibold mb-2">Confirm Logout</h3>
+            <p className="text-muted-foreground mb-6">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="px-4 py-2 rounded-md hover:bg-muted transition-colors text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutModal(false);
+                  handleLogout();
+                }}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md transition-colors text-sm font-medium"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

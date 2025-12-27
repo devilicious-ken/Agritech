@@ -80,7 +80,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
       const hectares = parcels.total_farm_area_ha || 1;
 
       const purokBounds = getPurokBounds(`${purok}, ${barangay}`);
-      
+
       if (!purokBounds) {
         console.error('Could not find purok bounds');
         return;
@@ -109,10 +109,10 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
       const featurePurokName = getPurokName(feature.properties);
       if (featurePurokName === purokName && feature.geometry && feature.geometry.coordinates) {
         const coords = feature.geometry.coordinates[0];
-        
+
         const lats = coords.map(c => c[1]);
         const lngs = coords.map(c => c[0]);
-        
+
         return {
           minLat: Math.min(...lats),
           maxLat: Math.max(...lats),
@@ -130,7 +130,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
 
   const generateFarmPolygon = (purokBounds, hectares) => {
     const sizeFactor = Math.sqrt(hectares) * 0.0008;
-    
+
     const centerLat = purokBounds.center.lat;
     const centerLng = purokBounds.center.lng;
 
@@ -154,7 +154,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
   const getPurokName = (properties) => {
     const props = properties || {};
     const rawName = props.Name || props.PUROK || props.Barangay || props.purok || props.name || props.id;
-    
+
     if (rawName && propertyToPurokMapping[rawName]) {
       return propertyToPurokMapping[rawName];
     }
@@ -164,7 +164,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
         return value;
       }
     }
-    
+
     return rawName || "Unnamed Purok";
   };
 
@@ -172,7 +172,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
     const purokName = getPurokName(feature.properties);
     const isSelected = purokName === selectedPurok && isZoomed;
     const isFocusedPurok = focusedFarmParcel && purokName === focusedFarmParcel.purokKey;
-    
+
     return {
       color: isFocusedPurok ? '#f59e0b' : isSelected ? '#f59e0b' : '#ffffff',
       weight: isFocusedPurok ? 4 : isSelected ? 4 : 2,
@@ -246,10 +246,10 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
   useEffect(() => {
     if (focusedFarmParcel && focusedFarmParcel.coordinates) {
       const map = mapRef.current;
-      
+
       if (map) {
         const purokBounds = getPurokBounds(focusedFarmParcel.purokKey);
-        
+
         if (purokBounds) {
           map.fitBounds([
             [purokBounds.minLat, purokBounds.minLng],
@@ -323,7 +323,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
         onClick={handleMapClick}
         attributionControl={false}
       >
-        <LayersControl position="topright">
+        <LayersControl position="bottomleft">
           {/* Satellite base layer (Esri World Imagery) */}
           <LayersControl.BaseLayer checked name="Satellite (ESRI)">
             <TileLayer
@@ -348,10 +348,10 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
             />
           </LayersControl.BaseLayer>
 
-          
+
           {/* Heat Map Style (OpenTopoMap as a proxy for 'heat map' distinct style or Stamen Toner if available, let's use OpenTopoMap for terrain/heat context) */}
           <LayersControl.BaseLayer name="Heat Map (Terrain)">
-             <TileLayer
+            <TileLayer
               url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
               attribution="Map data: &copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors, <a href='http://viewfinderpanoramas.org'>SRTM</a> | Map style: &copy; <a href='https://opentopomap.org'>OpenTopoMap</a> (<a href='https://creativecommons.org/licenses/by-sa/3.0/'>CC-BY-SA</a>)"
             />
@@ -366,7 +366,7 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
             style={getPolygonStyle}
             onEachFeature={onEachFeature}
             ref={geoJsonLayerRef}
-          />        
+          />
         )}
 
         {/* âœ… Render focused farmer's parcel */}
@@ -380,9 +380,9 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
               fillOpacity: 0.6,
             }}
           >
-            <Tooltip 
-              permanent 
-              direction="top" 
+            <Tooltip
+              permanent
+              direction="top"
               offset={[0, -10]}
               className="farm-tooltip"
             >

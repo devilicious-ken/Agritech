@@ -1,7 +1,7 @@
 // src/components/PinMarkMap.jsx
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/api';
@@ -118,46 +118,51 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
       const farmersWithPositions = [];
 
       registrants?.forEach((registrant) => {
-        // ✅ Find a parcel with valid coordinates
-        const parcelWithLocation = registrant.farm_parcels?.find(p => p.latitude && p.longitude);
+        // ✅ Iterate through ALL farm parcels with valid coordinates
+        registrant.farm_parcels?.forEach((parcel, parcelIndex) => {
+          // SKIP parcels without valid location
+          if (!parcel.latitude || !parcel.longitude) return;
 
-        // SKIP if no valid location found
-        if (!parcelWithLocation) return;
+          const position = {
+            lat: parcel.latitude,
+            lng: parcel.longitude
+          };
 
-        const position = {
-          lat: parcelWithLocation.latitude,
-          lng: parcelWithLocation.longitude
-        };
+          const address = registrant.addresses?.[0];
+          const purok = address?.purok || 'Unknown Purok';
+          const barangay = address?.barangay || 'Unknown Barangay';
+          const purokKey = `${purok}, ${barangay}`;
 
-        const address = registrant.addresses?.[0];
-        const purok = address?.purok || 'Unknown Purok';
-        const barangay = address?.barangay || 'Unknown Barangay';
-        const purokKey = `${purok}, ${barangay}`;
+          const crops = registrant.crops?.map(c => c.name) || [];
+          const farmSize = parcel.total_farm_area_ha
+            ? `${parcel.total_farm_area_ha} ha`
+            : 'N/A';
 
-        const crops = registrant.crops?.map(c => c.name) || [];
-        const farmSize = parcelWithLocation.total_farm_area_ha
-          ? `${parcelWithLocation.total_farm_area_ha} ha`
-          : 'N/A';
+          // Create unique ID for each parcel marker
+          const markerId = `${registrant.reference_no || registrant.id}-parcel-${parcelIndex}`;
 
-        farmersWithPositions.push({
-          id: registrant.reference_no || registrant.id,
-          name: `${registrant.first_name} ${registrant.middle_name || ''} ${registrant.surname}`.trim(),
-          position: position,
-          purok: purok,
-          barangay: barangay,
-          purokKey: purokKey,
-          address: `${purok}, ${barangay}`, // Added address property
-          crops: crops.length > 0 ? crops : ['N/A'],
-          size: farmSize,
-          imageUrl: parcelWithLocation.image_url, // Pass image URL
-          contact: registrant.mobile_number || 'N/A',
-          dateRegistered: new Date(registrant.created_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          }),
-          status: 'Active',
-          fullData: registrant
+          farmersWithPositions.push({
+            id: markerId, // Unique ID for this parcel
+            registrantId: registrant.reference_no || registrant.id, // Original registrant ID
+            name: `${registrant.first_name} ${registrant.middle_name || ''} ${registrant.surname}`.trim(),
+            position: position,
+            purok: purok,
+            barangay: barangay,
+            purokKey: purokKey,
+            address: `${purok}, ${barangay}`, // Added address property
+            crops: crops.length > 0 ? crops : ['N/A'],
+            size: farmSize,
+            imageUrl: parcel.image_url, // Pass image URL from this parcel
+            contact: registrant.mobile_number || 'N/A',
+            dateRegistered: new Date(registrant.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            status: 'Active',
+            parcelIndex: parcelIndex, // Track which parcel this is
+            fullData: registrant
+          });
         });
       });
 
@@ -193,7 +198,7 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
       handleResetView();
     }
   }, [selectedFarmerId]);
-  
+
   // ✅ Filter markers based on search term
   const visibleMarkers = markers.filter(marker => {
     if (!searchTerm) return true;
@@ -249,14 +254,43 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
         style={{ height: '600px', width: '100%' }}
         scrollWheelZoom={true}
         doubleClickZoom={true}
-        zoomControl={true}
+        zoomControl={false}
         ref={mapRef}
+        attributionControl={false}
       >
-        {/* Satellite base layer */}
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-          attribution='&copy; <a href="https://www.esri.com/">Esri</a>'
-        />
+        <LayersControl position="bottomleft">
+          {/* Satellite base layer (Esri World Imagery) */}
+          <LayersControl.BaseLayer checked name="Satellite (ESRI)">
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* OpenStreetMap */}
+          <LayersControl.BaseLayer name="OpenStreetMap">
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* Dark Mode (CartoDB Dark Matter) */}
+          <LayersControl.BaseLayer name="Dark Mode">
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* Heat Map Style (OpenTopoMap) */}
+          <LayersControl.BaseLayer name="Heat Map (Terrain)">
+            <TileLayer
+              url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+              attribution="Map data: &copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors, <a href='http://viewfinderpanoramas.org'>SRTM</a> | Map style: &copy; <a href='https://opentopomap.org'>OpenTopoMap</a> (<a href='https://creativecommons.org/licenses/by-sa/3.0/'>CC-BY-SA</a>)"
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
 
         {/* Zoom handler */}
         <MapZoomHandler selectedMarkerId={selectedFarmerId} markers={markers} />
@@ -340,20 +374,20 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
         </div>
         <div className="space-y-1.5 text-xs">
           <div className="flex items-center gap-2">
-            <div style={{ 
-              width: '12px', 
-              height: '12px', 
-              backgroundColor: '#10b981', 
+            <div style={{
+              width: '12px',
+              height: '12px',
+              backgroundColor: '#10b981',
               borderRadius: '50%',
               border: '2px solid white'
             }}></div>
             <span>Farmer Location</span>
           </div>
           <div className="flex items-center gap-2">
-            <div style={{ 
-              width: '14px', 
-              height: '14px', 
-              backgroundColor: '#f59e0b', 
+            <div style={{
+              width: '14px',
+              height: '14px',
+              backgroundColor: '#f59e0b',
               borderRadius: '50%',
               border: '2px solid white'
             }}></div>
