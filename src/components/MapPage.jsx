@@ -51,14 +51,40 @@ const MapPage = () => {
       const { data: registrants, error: regError } = await supabase
         .from('registrants')
         .select(`
-          *,
-          addresses (*),
-          crops (*),
-          livestock (*),
-          poultry (*),
-          fishing_activities (*),
-          farm_parcels (*),
-          financial_infos (*)
+          id,
+          reference_no,
+          registry,
+          surname,
+          first_name,
+          middle_name,
+          mobile_number,
+          created_at,
+          addresses (
+            barangay,
+            purok,
+            municipality_city,
+            province
+          ),
+          crops (
+            name
+          ),
+          livestock (
+            animal,
+            head_count
+          ),
+          poultry (
+            bird,
+            head_count
+          ),
+          fishing_activities (
+            activity
+          ),
+          farm_parcels (
+            total_farm_area_ha,
+            image_url,
+            latitude,
+            longitude
+          )
         `)
         .is('deleted_at', null);
 
@@ -227,16 +253,6 @@ const MapPage = () => {
       setSelectedFile(null);
       fetchRegistrantsData();
     }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   };
 
   const handleExport = (type) => {
@@ -442,25 +458,6 @@ const MapPage = () => {
                     >
                       <i className="fas fa-arrow-left mr-2" />
                       Back to list
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        // Open comprehensive view modal with full data
-                        setSelectedFarmer({
-                          ...selectedPinFarmer.fullData,
-                          id: selectedPinFarmer.registrantId || selectedPinFarmer.id,
-                          name: selectedPinFarmer.name,
-                          type: 'Farmer',
-                          phone: selectedPinFarmer.contact,
-                          address: selectedPinFarmer.address,
-                          dateRegistered: selectedPinFarmer.dateRegistered
-                        });
-                        setShowViewModal(true);
-                      }}
-                      className="bg-blue-600 hover:bg-blue-700 text-foreground"
-                    >
-                      <i className="fas fa-eye mr-2" />
-                      View Details
                     </Button>
                     <Button
                       onClick={() =>
@@ -721,10 +718,10 @@ const MapPage = () => {
       )}
 
       {showViewModal && selectedFarmer && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <Card className="bg-card border-0 shadow-xl max-w-6xl w-full my-8">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <Card className="bg-card border-0 shadow-xl max-w-2xl w-full">
             <CardHeader className="flex flex-row items-center justify-between border-b border-border">
-              <CardTitle className="text-foreground">Registrant Details - {selectedFarmer.id || selectedFarmer.reference_no}</CardTitle>
+              <CardTitle className="text-foreground">Registrant Details</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
@@ -734,362 +731,65 @@ const MapPage = () => {
                 <i className="fas fa-times"></i>
               </Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-              {/* Personal Information Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-user mr-2"></i> Personal Information
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Reference ID</label>
-                    <p className="text-foreground font-mono">{selectedFarmer.id || selectedFarmer.reference_no}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Registry Type</label>
-                    <p>
-                      <Badge className="bg-green-900/50 text-green-300">
-                        {selectedFarmer.type || 'Farmer'}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Status</label>
-                    <p>
-                      <Badge className="bg-green-900/50 text-green-300">
-                        {selectedFarmer.status || 'Active'}
-                      </Badge>
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Surname</label>
-                    <p className="text-foreground">{selectedFarmer.surname || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">First Name</label>
-                    <p className="text-foreground">{selectedFarmer.first_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Middle Name</label>
-                    <p className="text-foreground">{selectedFarmer.middle_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Extension Name</label>
-                    <p className="text-foreground">{selectedFarmer.extension_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Sex</label>
-                    <p className="text-foreground">{selectedFarmer.sex || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Date of Birth</label>
-                    <p className="text-foreground">
-                      {selectedFarmer.date_of_birth ? formatDate(selectedFarmer.date_of_birth) : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Place of Birth</label>
-                    <p className="text-foreground">{selectedFarmer.place_of_birth || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Civil Status</label>
-                    <p className="text-foreground">{selectedFarmer.civil_status || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Religion</label>
-                    <p className="text-foreground">{selectedFarmer.religion || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Spouse Name</label>
-                    <p className="text-foreground">{selectedFarmer.spouse_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Mother's Maiden Name</label>
-                    <p className="text-foreground">{selectedFarmer.mother_full_name || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Information Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-phone mr-2"></i> Contact Information
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Mobile Number</label>
-                    <p className="text-foreground">{selectedFarmer.mobile_number || selectedFarmer.phone || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Landline Number</label>
-                    <p className="text-foreground">{selectedFarmer.landline_number || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Emergency Contact Name</label>
-                    <p className="text-foreground">{selectedFarmer.emergency_contact_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Emergency Contact Phone</label>
-                    <p className="text-foreground">{selectedFarmer.emergency_contact_phone || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Address Information Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-map-marker-alt mr-2"></i> Address
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Barangay</label>
-                    <p className="text-foreground">{selectedFarmer.addresses?.[0]?.barangay || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Purok/Sitio</label>
-                    <p className="text-foreground">{selectedFarmer.addresses?.[0]?.purok || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Municipality/City</label>
-                    <p className="text-foreground">{selectedFarmer.addresses?.[0]?.municipality_city || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Province</label>
-                    <p className="text-foreground">{selectedFarmer.addresses?.[0]?.province || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Region</label>
-                    <p className="text-foreground">{selectedFarmer.addresses?.[0]?.region || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Household Information Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-users mr-2"></i> Household Information
-                </h4>
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Household Head</label>
-                    <p className="text-foreground">{selectedFarmer.is_household_head ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Total Members</label>
-                    <p className="text-foreground">{selectedFarmer.household_members_count || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Male Members</label>
-                    <p className="text-foreground">{selectedFarmer.household_males || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Female Members</label>
-                    <p className="text-foreground">{selectedFarmer.household_females || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Government IDs & Benefits Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-id-card mr-2"></i> Government IDs & Benefits
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">Has Government ID</label>
-                    <p className="text-foreground">{selectedFarmer.has_government_id ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">ID Type</label>
-                    <p className="text-foreground">{selectedFarmer.government_id_type || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">ID Number</label>
-                    <p className="text-foreground">{selectedFarmer.government_id_number || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">PWD</label>
-                    <p className="text-foreground">{selectedFarmer.is_pwd ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">4Ps Beneficiary</label>
-                    <p className="text-foreground">{selectedFarmer.is_4ps ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Indigenous</label>
-                    <p className="text-foreground">{selectedFarmer.is_indigenous ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Indigenous Group</label>
-                    <p className="text-foreground">{selectedFarmer.indigenous_group_name || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Member of Cooperative</label>
-                    <p className="text-foreground">{selectedFarmer.is_member_coop ? 'Yes' : 'No'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Cooperative Name</label>
-                    <p className="text-foreground">{selectedFarmer.coop_name || 'N/A'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Farm Data Section (for Farmers) */}
-              {(selectedFarmer.type === 'Farmer' || selectedFarmer.registry === 'farmer') && (
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                    <i className="fas fa-tractor mr-2"></i> Farm Data
-                  </h4>
-
-                  {/* Farm Parcels - Separate Cards */}
-                  {selectedFarmer.farm_parcels && selectedFarmer.farm_parcels.length > 0 ? (
-                    <div className="space-y-4 mb-6">
-                      <h5 className="font-semibold text-foreground">Farm Parcels</h5>
-                      {selectedFarmer.farm_parcels.map((parcel, index) => (
-                        <div key={index} className="p-4 rounded-lg border border-border bg-muted/30">
-                          <div className="flex justify-between items-center mb-3">
-                            <h6 className="font-semibold text-foreground">
-                              <i className="fas fa-map mr-2"></i>Parcel #{index + 1}
-                            </h6>
-                            {parcel.latitude && parcel.longitude ? (
-                              <Badge className="bg-green-500/10 text-green-600 border-0">
-                                <i className="fas fa-map-pin mr-1"></i> Pinmark Set
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-yellow-500/10 text-yellow-600 border-0">
-                                <i className="fas fa-map-pin mr-1"></i> No Pinmark
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Parcel Details */}
-                          <div className="grid grid-cols-3 gap-4 mb-4">
-                            <div>
-                              <label className="text-sm text-muted-foreground">Farmers in Rotation</label>
-                              <p className="text-foreground">{parcel.farmers_in_rotation || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Farm Location</label>
-                              <p className="text-foreground">{parcel.farm_location || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Total Farm Area</label>
-                              <p className="text-foreground">{parcel.total_farm_area_ha ? `${parcel.total_farm_area_ha} ha` : 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Ownership Document</label>
-                              <p className="text-foreground">{parcel.ownership_document || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Document Number</label>
-                              <p className="text-foreground">{parcel.ownership_document_no || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Ownership Type</label>
-                              <p className="text-foreground">{parcel.ownership || 'N/A'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Within Ancestral Domain</label>
-                              <p className="text-foreground">{parcel.within_ancestral_domain ? 'Yes' : 'No'}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Agrarian Reform Beneficiary</label>
-                              <p className="text-foreground">{parcel.agrarian_reform_beneficiary ? 'Yes' : 'No'}</p>
-                            </div>
-                            {parcel.latitude && parcel.longitude && (
-                              <div>
-                                <label className="text-sm text-muted-foreground">Coordinates</label>
-                                <p className="text-foreground font-mono text-sm">
-                                  {parcel.latitude}, {parcel.longitude}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          {/* Crops for this Parcel - Only show for first parcel */}
-                          {index === 0 && selectedFarmer.crops && selectedFarmer.crops.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <h6 className="font-semibold text-foreground mb-2">
-                                <i className="fas fa-seedling mr-2"></i>Crops
-                              </h6>
-                              <p className="text-foreground">
-                                {selectedFarmer.crops.map((c) => `${c.name}${c.value_text ? ` (${c.value_text})` : ''}${c.corn_type ? ` - ${c.corn_type}` : ''}`).join(', ')}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Livestock for this Parcel - Only show for first parcel */}
-                          {index === 0 && selectedFarmer.livestock && selectedFarmer.livestock.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <h6 className="font-semibold text-foreground mb-2">
-                                <i className="fas fa-horse mr-2"></i>Livestock
-                              </h6>
-                              <p className="text-foreground">
-                                {selectedFarmer.livestock.map((l) => `${l.animal} (${l.head_count} heads)`).join(', ')}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Poultry for this Parcel - Only show for first parcel */}
-                          {index === 0 && selectedFarmer.poultry && selectedFarmer.poultry.length > 0 && (
-                            <div className="mt-4 pt-4 border-t border-border">
-                              <h6 className="font-semibold text-foreground mb-2">
-                                <i className="fas fa-dove mr-2"></i>Poultry
-                              </h6>
-                              <p className="text-foreground">
-                                {selectedFarmer.poultry.map((p) => `${p.bird} (${p.head_count} heads)`).join(', ')}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground italic">No farm parcels recorded</p>
-                  )}
+                  <label className="text-muted-foreground text-sm">RSBSA Number</label>
+                  <p className="text-foreground font-mono">{selectedFarmer.id}</p>
                 </div>
-              )}
-
-              {/* Financial Information Section */}
-              <div>
-                <h4 className="text-lg font-semibold text-foreground mb-3 border-b border-border pb-2">
-                  <i className="fas fa-money-bill mr-2"></i> Financial Information
-                </h4>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label className="text-sm text-muted-foreground">TIN Number</label>
-                    <p className="text-foreground">{selectedFarmer.financial_infos?.[0]?.tin_number || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Source of Funds</label>
-                    <p className="text-foreground">{selectedFarmer.financial_infos?.[0]?.source_of_funds || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Income from Farming</label>
-                    <p className="text-foreground">
-                      {selectedFarmer.financial_infos?.[0]?.income_farming
-                        ? `₱${parseFloat(selectedFarmer.financial_infos[0].income_farming).toLocaleString()}`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Income from Non-Farming</label>
-                    <p className="text-foreground">
-                      {selectedFarmer.financial_infos?.[0]?.income_non_farming
-                        ? `₱${parseFloat(selectedFarmer.financial_infos[0].income_non_farming).toLocaleString()}`
-                        : 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <label className="text-sm text-muted-foreground">Highest Education</label>
-                    <p className="text-foreground">{selectedFarmer.highest_education || 'N/A'}</p>
+                <div>
+                  <label className="text-muted-foreground text-sm">Status</label>
+                  <p>
+                    <Badge className="bg-green-900/50 text-green-300">{selectedFarmer.status}</Badge>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Full Name</label>
+                  <p className="text-foreground">{selectedFarmer.name}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Contact Number</label>
+                  <p className="text-foreground">{selectedFarmer.contact}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-muted-foreground text-sm">Address</label>
+                  <p className="text-foreground">{selectedFarmer.address}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Coordinates</label>
+                  <p className="text-foreground font-mono text-sm">{selectedFarmer.coordinates}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Farm Size</label>
+                  <p className="text-foreground">{selectedFarmer.size}</p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Type</label>
+                  <p>
+                    <Badge className={selectedFarmer.type === 'Farmer' ? 'bg-green-900/50 text-green-300' : 'bg-blue-900/50 text-blue-300'}>
+                      {selectedFarmer.type}
+                    </Badge>
+                  </p>
+                </div>
+                <div>
+                  <label className="text-muted-foreground text-sm">Date Registered</label>
+                  <p className="text-foreground">{selectedFarmer.dateRegistered}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="text-muted-foreground text-sm">Crops/Activities</label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedFarmer.crops && selectedFarmer.crops.length > 0 && selectedFarmer.crops[0] !== 'N/A' ? (
+                      selectedFarmer.crops.map((crop, idx) => (
+                        <Badge key={idx} className="bg-[#333333] text-muted-foreground">{crop}</Badge>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground text-sm">No crops/activities listed</span>
+                    )}
                   </div>
                 </div>
               </div>
-
-              {/* Action Buttons */}
               <div className="flex gap-2 justify-end pt-4 border-t border-border">
-                {(selectedFarmer.type === 'Farmer' || selectedFarmer.registry === 'farmer') && (
+                {selectedFarmer.type === 'Farmer' && (
                   <Button
                     onClick={handleViewOnMap}
                     className="bg-orange-600 hover:bg-orange-700 text-foreground"
