@@ -28,27 +28,24 @@ const RegisterPage = ({ user }) => {  // <-- ADDED user prop
   
   // Dynamic form arrays
   // Your farmParcels state should store all the field data
-const [farmParcels, setFarmParcels] = useState([{ 
-  id: Date.now(),
-  farmer_rotation: '',
-  farm_location: '',
-  total_area: '',
-  ownership_doc: '',
-  ownership_doc_no: '',
-  ownership_type: '',
-  ancestral_domain: '',
-  agrarian_reform: ''
-}]);
+// Dynamic form arrays
+const [farmParcels, setFarmParcels] = useState([
+  {
+    id: Date.now(),
+    farmer_rotation: '',
+    farm_location: '',
+    total_area: '',
+    ownership_doc: '',
+    ownership_doc_no: '',
+    ownership_type: '',
+    ancestral_domain: '',
+    agrarian_reform: ''
+  }
+]);
 
-const [parcelInfo, setParcelInfo] = useState([{ 
-  id: Date.now(),
-  crop_commodity: '',
-  size: '',
-  head_count: '',
-  farm_type: '',
-  organic: '',
-  remarks: ''
-}]);
+// Extended parcelInfo to include crop_name / animal_name / corn_type
+const [parcelInfo, setParcelInfo] = useState([]);
+
   const [otherCrops, setOtherCrops] = useState([]);
   const [livestock, setLivestock] = useState([]);
   const [poultry, setPoultry] = useState([]);
@@ -75,11 +72,9 @@ const [formInputs, setFormInputs] = useState({
   place_of_birth: '',
   mother_full_name: '',
   spouse_name: '',
-  perm_street: '',
   perm_municipality_city: '',
   perm_province: '',
   perm_region: '',
-  pres_street: '',
   pres_municipality_city: '',
   pres_province: '',
   pres_region: '',
@@ -108,7 +103,19 @@ const handleInputChange = (e) => {
   }));
 };
 
-
+// Auto-copy permanent address to present address when checkbox is checked
+React.useEffect(() => {
+  if (sameAsPermAddress) {
+    setSelectedBarangayPresent(selectedBarangay);
+    setSelectedPurokPresent(selectedPurok);
+    setFormInputs(prev => ({
+      ...prev,
+      pres_municipality_city: prev.perm_municipality_city,
+      pres_province: prev.perm_province,
+      pres_region: prev.perm_region
+    }));
+  }
+}, [sameAsPermAddress, selectedBarangay, selectedPurok, formInputs.perm_municipality_city, formInputs.perm_province, formInputs.perm_region]);
 
   // <-- ADDED: Submission states (ONLY 2 LINES)
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -116,7 +123,7 @@ const handleInputChange = (e) => {
 
   const getPurokOptions = (barangay) => {
     if (barangay === 'Upper Jasaan') {
-      return ['Purok 5', 'Purok 6', 'Purok 7', 'Purok 8', 'Purok 9'];
+      return ['Purok 5', 'Purok 6A', 'Purok 6B', 'Purok 7', 'Purok 8', 'Purok 9A', 'Purok 9B'];
     } else if (barangay === 'Lower Jasaan') {
       return ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Purok 10', 'Purok 11'];
     }
@@ -136,26 +143,34 @@ const handleInputChange = (e) => {
     }
   };
 
-  const addParcelInfo = () => {
-    if (parcelInfo.length < 5) {
-      setParcelInfo([...parcelInfo, { 
-        id: Date.now(),
-        crop_commodity: '',
-        size: '',
-        head_count: '',
-        farm_type: '',
-        organic: '',
-        remarks: ''
-      }]);
+  const addParcelInfo = (parcelId) => {
+    const existingForParcel = parcelInfo.filter(p => p.parcel_id === parcelId);
+    if (existingForParcel.length < 5) {
+      setParcelInfo([
+        ...parcelInfo,
+        {
+          id: Date.now(),
+          parcel_id: parcelId,
+          crop_commodity: 'Crops',
+          crop_name: '',
+          corn_type: '',
+          animal_name: '',
+          size: '',
+          head_count: '',
+          farm_type: '',
+          organic: '',
+          remarks: ''
+        }
+      ]);
     }
   };
-  
 
-  const removeParcelInfo = (id) => {
-    if (parcelInfo.length > 1) {
-      setParcelInfo(parcelInfo.filter(item => item.id !== id));
-    }
-  };
+const removeParcelInfo = (id) => {
+  if (parcelInfo.length > 1) {
+    setParcelInfo(parcelInfo.filter(item => item.id !== id));
+  }
+};
+
 
 // Load sample data function - for testing
 
@@ -165,6 +180,112 @@ const handleSubmit = async () => {
   setSubmitError(null);
 
   try {
+    // Validate Reference Number format (10-43-11-000-000000)
+    const refNoPattern = /^\d{2}-\d{2}-\d{2}-\d{3}-\d{6}$/;
+    if (!formInputs.reference_no || !refNoPattern.test(formInputs.reference_no)) {
+      setSubmitError('Reference Number must be in format: 10-43-11-000-000000');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // // Check for duplicate registration (Reference Number or Mobile Number)
+    // const { data: existingRegistrant } = await ApiService.supabase
+    //   .from('registrants')
+    //   .select('id, reference_no, mobile_number')
+    //   .or(`reference_no.eq.${formInputs.reference_no},mobile_number.eq.${formInputs.mobile_number}`)
+    //   .limit(1);
+    
+    // if (existingRegistrant && existingRegistrant.length > 0) {
+    //   setSubmitError('A registrant with this Reference Number or Mobile Number already exists.');
+    //   setIsSubmitting(false);
+    //   return;
+    // }
+
+    // Validate phone number format (+63 - 0000000000 or similar)
+    const phonePattern = /^\+63[\s-]*\d{10}$/;
+    if (formInputs.mobile_number && !phonePattern.test(formInputs.mobile_number.replace(/\s/g, ''))) {
+      setSubmitError('Mobile Number must be in format: +63 - 0000000000 (10 digits after +63)');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate name fields (min 2 characters, no special characters)
+    const namePattern = /^[A-Za-z\s]{2,}$/;
+    const nameFields = {
+      'Surname': formInputs.surname,
+      'First Name': formInputs.first_name,
+      'Middle Name': formInputs.middle_name
+    };
+    
+    for (const [fieldName, value] of Object.entries(nameFields)) {
+      if (value && !namePattern.test(value)) {
+        setSubmitError(`${fieldName} must be at least 2 characters and contain only letters (no special characters like .,/*@-_)`);
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Validate required personal fields
+    const requiredFields = {
+      'Reference Number': formInputs.reference_no,
+      'Surname': formInputs.surname,
+      'First Name': formInputs.first_name,
+      'Middle Name': formInputs.middle_name,
+      'Sex': formInputs.sex,
+      'Mobile Number': formInputs.mobile_number,
+      'Date of Birth': formInputs.date_of_birth,
+      'Civil Status': civilStatus,
+      'Mother\'s Maiden Name': formInputs.mother_full_name,
+      'Emergency Contact Name': formInputs.emergency_contact_name,
+      'Emergency Contact Phone': formInputs.emergency_contact_phone,
+      'Government ID Type': formInputs.government_id_type,
+      'Government ID Number': formInputs.government_id_number
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([field, value]) => !value || value.trim() === '')
+      .map(([field]) => field);
+
+    if (missingFields.length > 0) {
+      setSubmitError(`Please fill in the following required fields: ${missingFields.join(', ')}`);
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate required address fields (Barangay and Purok)
+    if (!selectedBarangay || !selectedPurok) {
+      setSubmitError('Please select Barangay and Purok in the Address section');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // Validate farm parcel fields (for farmers only)
+    if (registryType === 'farmer') {
+      for (const parcel of farmParcels) {
+        if (!parcel.farmer_rotation || !parcel.farm_location || !parcel.ownership_doc || !parcel.ownership_doc_no || !parcel.ownership_type) {
+          setSubmitError('Please fill in all required Farm Parcel fields: Farmer\'s in Rotation, Farm Location, Ownership Document, Document No., and Ownership Type');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // Validate parcel info fields
+      for (const info of parcelInfo) {
+        if (info.crop_commodity === 'Crops') {
+          if (!info.crop_name || !info.size || !info.farm_type) {
+            setSubmitError('Please fill in all required Parcel Info fields: Crop Name, Size (ha), and Farm Type');
+            setIsSubmitting(false);
+            return;
+          }
+          if (info.crop_name === 'Corn' && !info.corn_type) {
+            setSubmitError('Please select Corn Type (Yellow or White) for Corn crops');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+    }
+
     // 1. CREATE REGISTRANT
     const registrantData = {
       user_id: null,
@@ -200,6 +321,11 @@ const handleSubmit = async () => {
       highest_education: formInputs.highest_education || null
     };
     const registrant = await ApiService.createRegistrant(registrantData);
+    
+    // Initialize arrays to collect crops/livestock/poultry from parcel info
+    const cropsFromParcels = [];
+    const livestockFromParcels = [];
+    const poultryFromParcels = [];
 
     // 2. CREATE ADDRESSES
     const addresses = [
@@ -209,23 +335,21 @@ const handleSubmit = async () => {
         barangay: selectedBarangay || null,
         purok: selectedPurok || null,
         municipality_city: formInputs.perm_municipality_city || null,
-        street: formInputs.perm_street || null,
         province: formInputs.perm_province || null,
         region: formInputs.perm_region || null
       }
     ];
-    if (!sameAsPermAddress) {
-      addresses.push({
-        registrant_id: registrant.id,
-        kind: 'present',
-        barangay: selectedBarangayPresent || null,
-        purok: selectedPurokPresent || null,
-        municipality_city: formInputs.pres_municipality_city || null,
-        street: formInputs.pres_street || null,
-        province: formInputs.pres_province || null,
-        region: formInputs.pres_region || null
-      });
-    }
+    // Always create present address
+    // If same as permanent, use permanent address values; otherwise use present address values
+    addresses.push({
+      registrant_id: registrant.id,
+      kind: 'present',
+      barangay: sameAsPermAddress ? (selectedBarangay || null) : (selectedBarangayPresent || null),
+      purok: sameAsPermAddress ? (selectedPurok || null) : (selectedPurokPresent || null),
+      municipality_city: sameAsPermAddress ? (formInputs.perm_municipality_city || null) : (formInputs.pres_municipality_city || null),
+      province: sameAsPermAddress ? (formInputs.perm_province || null) : (formInputs.pres_province || null),
+      region: sameAsPermAddress ? (formInputs.perm_region || null) : (formInputs.pres_region || null)
+    });
     await ApiService.createAddress(addresses);
 
     // 3. CREATE FINANCIAL INFO
@@ -240,8 +364,65 @@ const handleSubmit = async () => {
     };
     await ApiService.createFinancialInfo(financialData);
 
-    // 4. CREATE CROPS
+    // 4. CREATE FARM PARCELS & PARCEL INFOS
+    // Also extract crops/livestock/poultry from parcelInfo (even without farm parcels)
+    
+    // First, process parcelInfo to extract crops/livestock/poultry for the registrant
+    parcelInfo.forEach(info => {
+      if (!info.crop_commodity) return;
+      
+      if (info.crop_commodity === 'Crops' && info.crop_name) {
+        cropsFromParcels.push({
+          registrant_id: registrant.id,
+          name: info.crop_name,
+          value_text: info.size ? `${info.size} ha` : null,
+          corn_type: null
+        });
+      } else if (info.crop_commodity === 'Livestock' && info.animal_name) {
+        livestockFromParcels.push({
+          registrant_id: registrant.id,
+          animal: info.animal_name,
+          head_count: info.head_count ? parseInt(info.head_count) : null
+        });
+      } else if (info.crop_commodity === 'Poultry' && info.animal_name) {
+        poultryFromParcels.push({
+          registrant_id: registrant.id,
+          bird: info.animal_name,
+          head_count: info.head_count ? parseInt(info.head_count) : null
+        });
+      }
+    });
+    
+    // Then, if farm parcels exist, save them and their parcel_infos
+    // Calculate total farm area from parcelInfo sizes
+    const totalFarmArea = parcelInfo
+      .filter(info => info.crop_commodity === 'Crops' && info.size)
+      .reduce((sum, info) => sum + parseFloat(info.size || 0), 0);
+
+    for (const parcel of farmParcels) {
+      if (parcel.farm_location) {
+        const parcelData = {
+          registrant_id: registrant.id,
+          farmers_in_rotation: parcel.farmer_rotation || null,
+          farm_location: parcel.farm_location || null,
+          total_farm_area_ha: totalFarmArea > 0 ? totalFarmArea : null,
+          ownership_document: parcel.ownership_doc || null,
+          ownership_document_no: parcel.ownership_doc_no || null,
+          ownership: parcel.ownership_type || null,
+          within_ancestral_domain: parcel.ancestral_domain === 'yes',
+          agrarian_reform_beneficiary: parcel.agrarian_reform === 'yes'
+        };
+        const savedParcel = await ApiService.createFarmParcel(parcelData);
+        
+        // Note: Commodity data (Crops/Livestock/Poultry) is saved directly to 
+        // their respective tables, not to parcel_infos
+      }
+    }
+
+    // 5. CREATE CROPS (now includes both manual entries and parcel-derived crops)
     const cropsToSave = [];
+
+    // Add crops from manual entry (Rice, Corn, Other Crops)
     if (isRiceChecked && riceValue) {
       cropsToSave.push({
         registrant_id: registrant.id,
@@ -268,64 +449,44 @@ const handleSubmit = async () => {
         });
       }
     });
+
+    // Add crops derived from parcelInfo
+    cropsFromParcels.forEach(c => cropsToSave.push(c));
+
     if (cropsToSave.length > 0) {
       await ApiService.createCrops(cropsToSave);
     }
 
-    // 5. CREATE LIVESTOCK
-    const livestockToSave = livestock
-      .filter(item => item.animal)
-      .map(item => ({
-        registrant_id: registrant.id,
-        animal: item.animal,
-        head_count: item.head_count ? parseInt(item.head_count) : null
-      }));
+    // 6. CREATE LIVESTOCK (now includes both manual entries and parcel-derived livestock)
+    const livestockToSave = [
+      ...livestock
+        .filter(item => item.animal)
+        .map(item => ({
+          registrant_id: registrant.id,
+          animal: item.animal,
+          head_count: item.head_count ? parseInt(item.head_count) : null
+        })),
+      ...livestockFromParcels
+    ];
+
     if (livestockToSave.length > 0) {
       await ApiService.createLivestock(livestockToSave);
     }
 
-    // 6. CREATE POULTRY
-    const poultryToSave = poultry
-      .filter(item => item.bird)
-      .map(item => ({
-        registrant_id: registrant.id,
-        bird: item.bird,
-        head_count: item.head_count ? parseInt(item.head_count) : null
-      }));
+    // 7. CREATE POULTRY (now includes both manual entries and parcel-derived poultry)
+    const poultryToSave = [
+      ...poultry
+        .filter(item => item.bird)
+        .map(item => ({
+          registrant_id: registrant.id,
+          bird: item.bird,
+          head_count: item.head_count ? parseInt(item.head_count) : null
+        })),
+      ...poultryFromParcels
+    ];
+
     if (poultryToSave.length > 0) {
       await ApiService.createPoultry(poultryToSave);
-    }
-
-    // 7. CREATE FARM PARCELS & PARCEL INFOS
-    for (const parcel of farmParcels) {
-      if (parcel.farm_location && parcel.total_area) {
-        const parcelData = {
-          registrant_id: registrant.id,
-          farmers_in_rotation: parcel.farmer_rotation || null,
-          farm_location: parcel.farm_location || null,
-          total_farm_area_ha: parcel.total_area ? parseFloat(parcel.total_area) : null,
-          ownership_document: parcel.ownership_doc || null,
-          ownership_document_no: parcel.ownership_doc_no || null,
-          ownership: parcel.ownership_type || null,
-          within_ancestral_domain: parcel.ancestral_domain === 'yes',
-          agrarian_reform_beneficiary: parcel.agrarian_reform === 'yes'
-        };
-        const savedParcel = await ApiService.createFarmParcel(parcelData);
-        const parcelInfosToSave = parcelInfo
-          .filter(info => info.crop_commodity)
-          .map(info => ({
-            parcel_id: savedParcel.id,
-            crop: info.crop_commodity,
-            size_ha: info.size ? parseFloat(info.size) : null,
-            num_head: info.head_count ? parseInt(info.head_count) : null,
-            farm_kind: info.farm_type || null,
-            is_organic_practitioner: info.organic === 'yes',
-            remarks: info.remarks || null
-          }));
-        if (parcelInfosToSave.length > 0) {
-          await ApiService.createParcelInfos(parcelInfosToSave);
-        }
-      }
     }
 
     // 8. CREATE FISHING ACTIVITIES
@@ -390,8 +551,8 @@ const handleSubmit = async () => {
     setFormInputs({
       reference_no: '', surname: '', first_name: '', middle_name: '', extension_name: '', sex: '',
       mobile_number: '', landline_number: '', date_of_birth: '', place_of_birth: '', mother_full_name: '', spouse_name: '',
-      perm_street: '', perm_municipality_city: '', perm_province: '', perm_region: '',
-      pres_street: '', pres_municipality_city: '', pres_province: '', pres_region: '',
+      perm_municipality_city: '', perm_province: '', perm_region: '',
+      pres_municipality_city: '', pres_province: '', pres_region: '',
       highest_education: '', rsbsa_reference_no: '', tin_number: '', profession: '', source_of_funds: '', income_farming: '', income_non_farming: ''
     });
     setReligion('');
@@ -419,9 +580,19 @@ const handleSubmit = async () => {
       id: Date.now(), farmer_rotation: '', farm_location: '', total_area: '', ownership_doc: '', ownership_doc_no: '',
       ownership_type: '', ancestral_domain: '', agrarian_reform: ''
     }]);
-    setParcelInfo([{
-      id: Date.now(), crop_commodity: '', size: '', head_count: '', farm_type: '', organic: '', remarks: ''
-    }]);
+    setParcelInfo([
+  {
+    id: Date.now(),
+    crop_commodity: 'Crops',
+    crop_name: '',
+    animal_name: '',
+    size: '',
+    head_count: '',
+    farm_type: '',
+    organic: '',
+    remarks: ''
+  }
+]);
     setFishingActivities([{ id: Date.now(), activity: '' }]);
     setFishingCheckboxes({
       fish_capture: false, aquaculture: false, gleaning: false, fish_processing: false, fish_vending: false
@@ -448,13 +619,43 @@ const handleSubmit = async () => {
   };
 
   const extensionOptions = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
-  const religionOptions = ['Christianity', 'Islam', 'Others'];
+  const religionOptions = ['Roman Catholic', 'Protestant', 'Iglesia ni Cristo', 'Islam', 'Seventh-day Adventist', 'Aglipayan', 'Bible Baptist Church', 'United Church of Christ', 'Jehovah\'s Witness', 'Church of Christ', 'Born Again Christian', 'Buddhist', 'Hindu'];
   const civilStatusOptions = ['Single', 'Married', 'Widowed', 'Separated'];
   const educationOptions = ['Pre-School', 'Elementary', 'High School (non-K12)', 'Junior High School (K-12)', 'Senior High School (K-12)', 'College', 'Vocational', 'Post-Graduate', 'None'];
-  const ownershipDocOptions = ['Certificate of Land Transfer', 'Emancipation Patent', 'Individual Certificate of Land Ownership Award (CLOA)', 'Collective CLOA', 'Co-ownership CLOA', 'Agricultural Sales Patent', 'Homestead Patent', 'Free Patent', 'Certificate of Title or Regular Title', 'Certificate of Ancestral Domain Title', 'Certificate of Ancestral Land Title', 'Tax Declaration', 'Others'];
-  const ownershipTypeOptions = ['Registered Owner', 'Tenant', 'Lessee', 'Others'];
+  const ownershipDocOptions = ['Certificate of Land Transfer', 'Emancipation Patent', 'Individual Certificate of Land Ownership Award (CLOA)', 'Collective CLOA', 'Co-ownership CLOA', 'Agricultural Sales Patent', 'Homestead Patent', 'Free Patent', 'Certificate of Title or Regular Title', 'Certificate of Ancestral Domain Title', 'Certificate of Ancestral Land Title', 'Tax Declaration'];
+  const ownershipTypeOptions = ['Registered Owner', 'Tenant', 'Lessee', 'Mortgage'];
   const farmTypeOptions = ['Irrigated', 'Rainfed Upland', 'Rainfed Lowland'];
-  const cropCommodityOptions = ['Rice', 'Corn', 'HVC', 'Poultry', 'Agri-Fishery', 'Livestock'];
+  const cropCommodityOptions = ['Crops', 'Poultry', 'Livestock'];
+  
+  // Comprehensive crop list - Vegetables, Fruits, Plantation Crops
+  const cropNameOptions = [
+    // Vegetables & Legumes
+    'Ampalaya', 'Broccoli', 'Cabbage', 'Carrot', 'Cauliflower', 'Eggplant (Talong)', 'Ginger', 'Gourd (Upo/Patola)', 'Lettuce', 'Okra', 
+    'Pechay (Native)', 'Pechay (Chinese/Bok choy)', 'Pepper (Chili/Bell)', 'Squash (Kalabasa)', 'String beans/Sitaw', 'Tomato', 
+    'Sweet potato (Kamote)', 'Cassava', 'Ube (Purple yam)', 'Gabi (Taro)', 'Singkamas', 'Spring onions', 'Celery', 'Mustard (Mustasa)', 
+    'Onion', 'Onion (bunching)', 'Cucumber', 'Radish (Labanos)', 'Spinach', 'Corn', 'Peas/Sweet peas', 'Beans (bush/pole)', 
+    'Peanut', 'Mung bean (Munggo)', 'Garlic (Bawang)', 'Kangkong (Water spinach)', 'Alugbati (Malabar spinach)', 'Patola (Sponge gourd)', 
+    'Sayote (Chayote)',
+    // Fruits
+    'Banana', 'Mango', 'Pineapple', 'Papaya', 'Rambutan', 'Lanzones', 'Durian', 'Guava', 'Pomelo', 'Citrus (Calamansi/Oranges)', 
+    'Mangosteen', 'Watermelon', 'Melon (Cantaloupe)', 'Coconut (Niyog)', 'Jackfruit (Langka)', 'Calamansi', 'Avocado', 
+    'Guyabano (Soursop)', 'Atis (Sugar apple)', 'Chico (Sapodilla)', 'Dalandan (Orange)',
+    // Industrial / Plantation Crops
+    'Coffee', 'Rubber', 'Cashew', 'Sugarcane', 'Rice', 'Abaca', 'Cacao', 'Tobacco'
+  ];
+  
+  const cornTypeOptions = ['Yellow', 'White'];
+  const governmentIdOptions = ['PhilID / ePhilID', 'GSIS', 'SSS', 'PhilHealth', 'Voter\'s ID', 'Driver\'s License', 'PRC License', 'Passport', 'Senior Citizen ID', 'PWD ID', 'Postal ID', 'TIN ID', 'Barangay ID', 'Company ID', 'School ID'];
+  const sourceFundsOptions = ['Personal Savings', 'Family Support', 'Agricultural Income', 'Remittance', 'Loan', 'Government Assistance', 'Pension', 'Business Income'];
+  
+  // Poultry animals
+  const poultryOptions = ['Chicken', 'Duck', 'Turkey', 'Gamefowl'];
+  
+  // Livestock animals
+  const livestockOptions = ['Carabao', 'Cattle/Cow', 'Goat', 'Pig/Swine', 'Sheep', 'Horse'];
+  
+  // Region options
+  const regionOptions = ['Region 1 - Ilocos', 'Region 2 - Cagayan Valley', 'Region 3 - Central Luzon', 'Region 4A - CALABARZON', 'Region 4B - MIMAROPA', 'Region 5 - Bicol', 'Region 6 - Western Visayas', 'Region 7 - Central Visayas', 'Region 8 - Eastern Visayas', 'Region 9 - Zamboanga Peninsula', 'Region 10 - Northern Mindanao', 'Region 11 - Davao', 'Region 12 - SOCCSKSARGEN', 'Region 13 - Caraga', 'NCR - National Capital Region', 'CAR - Cordillera', 'BARMM - Bangsamoro'];
 
   const renderRegistrySelector = () => (
     
@@ -499,46 +700,78 @@ const renderPersonalInfoTab = () => (
   <div className="space-y-6">
     {/* Reference Number */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Reference Number</label>
-      <Input 
-        name="reference_no"
-        value={formInputs.reference_no}
-        onChange={handleInputChange}
-        className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-        placeholder="00-00-00-000-000000" 
-      />
+      <label className="text-sm font-medium text-gray-400 mb-1 block">Reference Number <span className="text-red-500">*</span></label>
+      <div className="flex">
+        <span className="inline-flex items-center px-2 min-w-[85px] text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+            10-43-11-
+        </span>
+        <Input 
+          name="reference_no"
+          value={formInputs.reference_no?.replace('10-43-11-', '') || ''}
+          onChange={(e) => {
+            // Remove all non-digits
+            let digits = e.target.value.replace(/\D/g, '');
+            // Limit to (3+6 = 9 digits? user said 10-43-11-000-000000 which is 3+6=9 after prefix?)
+            // Previous placeholder: 10-43-11-000-000000
+            // Prefix: 10-43-11- (8 chars)
+            // Remaining: 000-000000 (3 + 6 = 9 digits)
+            
+            // User request: "make the Reference Number has limits and has prefix which is 10-43-11-"
+            // And: "12 numbers with auto insert '-' if i type 3 characters like 123 then generate - then 123 and so on also on reference number"
+            
+            // If I assume 3-6 format (XXX-XXXXXX):
+            digits = digits.slice(0, 9);
+            
+            let formatted = '';
+            if (digits.length > 0) formatted += digits.slice(0, 3);
+            if (digits.length > 3) formatted += '-' + digits.slice(3, 9);
+            
+            setFormInputs(prev => ({
+              ...prev,
+              reference_no: digits ? `10-43-11-${formatted}` : ''
+            }));
+          }}
+          className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+          placeholder="000-000000" 
+          maxLength={10} // 3+1+6
+          required
+        />
+      </div>
     </div>
 
     {/* Name Fields */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Surname</label>
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Surname <span className="text-red-500">*</span></label>
         <Input 
           name="surname"
           value={formInputs.surname}
           onChange={handleInputChange}
           className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
           placeholder="Surname" 
+          required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">First Name</label>
+        <label className="text-sm font-medium text-gray-400 mb-1 block">First Name <span className="text-red-500">*</span></label>
         <Input 
           name="first_name"
           value={formInputs.first_name}
           onChange={handleInputChange}
           className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
           placeholder="First Name" 
+          required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Middle Name</label>
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Middle Name <span className="text-red-500">*</span></label>
         <Input 
           name="middle_name"
           value={formInputs.middle_name}
           onChange={handleInputChange}
           className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
           placeholder="Middle Name" 
+          required
         />
       </div>
       <div>
@@ -559,7 +792,7 @@ const renderPersonalInfoTab = () => (
 
     {/* Sex */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Sex</label>
+      <label className="text-sm font-medium text-gray-400 mb-1 block">Sex <span className="text-red-500">*</span></label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -569,6 +802,7 @@ const renderPersonalInfoTab = () => (
             checked={formInputs.sex === 'male'}
             onChange={handleInputChange}
             className="h-4 w-4 text-blue-600" 
+            required
           />
           <span className="ml-2 text-gray-400">Male</span>
         </label>
@@ -580,6 +814,7 @@ const renderPersonalInfoTab = () => (
             checked={formInputs.sex === 'female'}
             onChange={handleInputChange}
             className="h-4 w-4 text-blue-600" 
+            required
           />
           <span className="ml-2 text-gray-400">Female</span>
         </label>
@@ -589,37 +824,63 @@ const renderPersonalInfoTab = () => (
     {/* Contact Numbers */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Mobile Number</label>
-        <Input 
-          name="mobile_number"
-          value={formInputs.mobile_number}
-          onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-          placeholder="+63 XXX XXX XXXX" 
-        />
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Mobile Number <span className="text-red-500">*</span></label>
+        <div className="flex">
+          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+            +63 
+          </span>
+          <Input 
+            name="mobile_number"
+            value={formInputs.mobile_number?.replace('+63 - ', '').replace('+63-', '').replace('+63', '') || ''}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormInputs(prev => ({
+                ...prev,
+                mobile_number: digits ? `+63 - ${digits}` : ''
+              }));
+            }}
+            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            placeholder="0000000000"
+            maxLength={10}
+            required
+          />
+        </div>
       </div>
       <div>
         <label className="text-sm font-medium text-gray-400 mb-1 block">Landline Number (Optional)</label>
-        <Input 
-          name="landline_number"
-          value={formInputs.landline_number}
-          onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-          placeholder="(XXX) XXX-XXXX" 
-        />
+        <div className="flex">
+          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+            +63 
+          </span>
+          <Input 
+            name="landline_number"
+            value={formInputs.landline_number?.replace('+63 - ', '').replace('+63-', '').replace('+63', '') || ''}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormInputs(prev => ({
+                ...prev,
+                landline_number: digits ? `+63 - ${digits}` : ''
+              }));
+            }}
+            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            placeholder="0000000000"
+            maxLength={10}
+          />
+        </div>
       </div>
     </div>
 
     {/* Birth Information */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Date of Birth</label>
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Date of Birth <span className="text-red-500">*</span></label>
         <Input 
           name="date_of_birth"
           value={formInputs.date_of_birth}
           onChange={handleInputChange}
           type="date"
           className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          required
         />
       </div>
       <div>
@@ -660,11 +921,12 @@ const renderPersonalInfoTab = () => (
 
     {/* Civil Status */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Civil Status</label>
+      <label className="text-sm font-medium text-gray-400 mb-1 block">Civil Status <span className="text-red-500">*</span></label>
       <select 
         value={civilStatus}
         onChange={(e) => setCivilStatus(e.target.value)}
         className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+        required
       >
         <option value="">Select</option>
         {civilStatusOptions.map(status => (
@@ -689,13 +951,14 @@ const renderPersonalInfoTab = () => (
 
     {/* Mother's Maiden Name */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Mother's Maiden Full Name</label>
+      <label className="text-sm font-medium text-gray-400 mb-1 block">Mother's Maiden Full Name <span className="text-red-500">*</span></label>
       <Input 
         name="mother_full_name"
         value={formInputs.mother_full_name}
         onChange={handleInputChange}
         className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
         placeholder="Mother's full maiden name" 
+        required
       />
     </div>
 
@@ -895,49 +1158,32 @@ const renderPersonalInfoTab = () => (
       )}
     </div>
 
-    {/* Government ID */}
+    {/* Government ID - Always Required */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">With Government ID</label>
-      <div className="flex gap-4">
-        <label className="flex items-center">
-          <input 
-            type="radio" 
-            name="govid" 
-            checked={hasGovId === true}
-            onChange={() => setHasGovId(true)}
-            className="h-4 w-4 text-blue-600" 
-          />
-          <span className="ml-2 text-gray-400">Yes</span>
-        </label>
-        <label className="flex items-center">
-          <input 
-            type="radio" 
-            name="govid" 
-            checked={hasGovId === false}
-            onChange={() => setHasGovId(false)}
-            className="h-4 w-4 text-blue-600" 
-          />
-          <span className="ml-2 text-gray-400">No</span>
-        </label>
+      <label className="text-sm font-medium text-gray-400 mb-1 block">Government ID <span className="text-red-500">*</span></label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+        <select 
+          name="government_id_type"
+          value={formInputs.government_id_type}
+          onChange={handleInputChange}
+          className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+          required
+        >
+          <option value="">Select ID Type</option>
+          {governmentIdOptions.map(id => (
+            <option key={id} value={id}>{id}</option>
+          ))}
+        </select>
+        <Input 
+          name="government_id_number"
+          value={formInputs.government_id_number}
+          onChange={handleInputChange}
+          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          placeholder="ID Number" 
+          disabled={!formInputs.government_id_type}
+          required
+        />
       </div>
-      {hasGovId && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          <Input 
-            name="government_id_type"
-            value={formInputs.government_id_type}
-            onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="ID Type (e.g., PhilSys, SSS)" 
-          />
-          <Input 
-            name="government_id_number"
-            value={formInputs.government_id_number}
-            onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="ID Number" 
-          />
-        </div>
-      )}
     </div>
 
     {/* Member of Coop */}
@@ -979,40 +1225,54 @@ const renderPersonalInfoTab = () => (
     {/* Emergency Contact */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Person to Notify in Case of Emergency</label>
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Person to Notify in Case of Emergency <span className="text-red-500">*</span></label>
         <Input 
           name="emergency_contact_name"
           value={formInputs.emergency_contact_name}
           onChange={handleInputChange}
           className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
           placeholder="Full name" 
+          required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Contact Number</label>
-        <Input 
-          name="emergency_contact_phone"
-          value={formInputs.emergency_contact_phone}
-          onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-          placeholder="+63 XXX XXX XXXX" 
-        />
+        <label className="text-sm font-medium text-gray-400 mb-1 block">Contact Number <span className="text-red-500">*</span></label>
+        <div className="flex">
+          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+            +63 
+          </span>
+          <Input 
+            name="emergency_contact_phone"
+            value={formInputs.emergency_contact_phone?.replace('+63 ', '').replace('+63-', '').replace('+63', '') || ''}
+            onChange={(e) => {
+              const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFormInputs(prev => ({
+                ...prev,
+                emergency_contact_phone: digits ? `+63 ${digits}` : ''
+              }));
+            }}
+            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            placeholder="0000000000"
+            maxLength={10}
+            disabled={!formInputs.emergency_contact_name}
+            required
+          />
+        </div>
       </div>
     </div>
   </div>
 );
 
-  // ========== COMPLETE MODIFIED ADDRESS TAB ==========
-// Copy and paste this to replace your renderAddressTab function
+  // ========== SIMPLIFIED ADDRESS TAB (Single Address) ==========
 
 const renderAddressTab = () => (
   <div className="space-y-6">
     <div>
-      <h3 className="text-lg font-medium text-gray-200 mb-4">Permanent Address</h3>
+      <h3 className="text-lg font-medium text-gray-200 mb-4">Address</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Barangay</label>
+          <label className="text-sm font-medium text-gray-400 mb-1 block">Barangay <span className="text-red-500">*</span></label>
           <select 
             value={selectedBarangay}
             onChange={(e) => {
@@ -1020,6 +1280,7 @@ const renderAddressTab = () => (
               setSelectedPurok('');
             }}
             className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+            required
           >
             <option value="">Select Barangay</option>
             <option value="Upper Jasaan">Upper Jasaan</option>
@@ -1028,12 +1289,13 @@ const renderAddressTab = () => (
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Purok/Sitio</label>
+          <label className="text-sm font-medium text-gray-400 mb-1 block">Purok/Sitio <span className="text-red-500">*</span></label>
           <select 
             value={selectedPurok}
             onChange={(e) => setSelectedPurok(e.target.value)}
             disabled={!selectedBarangay}
             className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+            required
           >
             <option value="">Select Purok</option>
             {getPurokOptions(selectedBarangay).map(purok => (
@@ -1043,385 +1305,57 @@ const renderAddressTab = () => (
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <label className="text-sm font-medium text-gray-400 mb-1 block">Municipality/City</label>
           <Input 
             name="perm_municipality_city"
-            value={formInputs.perm_municipality_city}
+            value={formInputs.perm_municipality_city || 'Jasaan'}
             onChange={handleInputChange}
             className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="Municipality or City" 
+            defaultValue="Jasaan"
+            readOnly
           />
         </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Street/Sitio/Subdivision</label>
-          <Input 
-            name="perm_street"
-            value={formInputs.perm_street}
-            onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="Street address" 
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <div>
           <label className="text-sm font-medium text-gray-400 mb-1 block">Province</label>
           <Input 
             name="perm_province"
-            value={formInputs.perm_province}
+            value={formInputs.perm_province || 'Misamis Oriental'}
             onChange={handleInputChange}
             className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="Province" 
+            defaultValue="Misamis Oriental"
+            readOnly
           />
         </div>
 
         <div>
           <label className="text-sm font-medium text-gray-400 mb-1 block">Region</label>
-          <Input 
+          <select 
             name="perm_region"
-            value={formInputs.perm_region}
+            value={formInputs.perm_region || 'Region 10 - Northern Mindanao'}
             onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            placeholder="Region" 
-          />
+            className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+          >
+            {regionOptions.map(region => (
+              <option key={region} value={region}>{region}</option>
+            ))}
+          </select>
         </div>
       </div>
     </div>
-
-    {/* Same as Permanent Address Checkbox */}
-    <div className="flex items-center">
-      <input 
-        type="checkbox" 
-        checked={sameAsPermAddress}
-        onChange={(e) => setSameAsPermAddress(e.target.checked)}
-        className="h-4 w-4 text-blue-600" 
-      />
-      <label className="ml-2 text-gray-400">Same as Permanent Address</label>
-    </div>
-
-    {/* Present Address (conditional) */}
-    {!sameAsPermAddress && (
-      <div>
-        <h3 className="text-lg font-medium text-gray-200 mb-4">Present Address</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Barangay</label>
-            <select 
-              value={selectedBarangayPresent}
-              onChange={(e) => {
-                setSelectedBarangayPresent(e.target.value);
-                setSelectedPurokPresent('');
-              }}
-              className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
-            >
-              <option value="">Select Barangay</option>
-              <option value="Upper Jasaan">Upper Jasaan</option>
-              <option value="Lower Jasaan">Lower Jasaan</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Purok/Sitio</label>
-            <select 
-              value={selectedPurokPresent}
-              onChange={(e) => setSelectedPurokPresent(e.target.value)}
-              disabled={!selectedBarangayPresent}
-              className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
-            >
-              <option value="">Select Purok</option>
-              {getPurokOptions(selectedBarangayPresent).map(purok => (
-                <option key={purok} value={purok}>{purok}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Municipality/City</label>
-            <Input 
-              name="pres_municipality_city"
-              value={formInputs.pres_municipality_city}
-              onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-              placeholder="Municipality or City" 
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Street/Sitio/Subdivision</label>
-            <Input 
-              name="pres_street"
-              value={formInputs.pres_street}
-              onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-              placeholder="Street address" 
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Province</label>
-            <Input 
-              name="pres_province"
-              value={formInputs.pres_province}
-              onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-              placeholder="Province" 
-            />
-          </div>
-
-          <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Region</label>
-            <Input 
-              name="pres_region"
-              value={formInputs.pres_region}
-              onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-              placeholder="Region" 
-            />
-          </div>
-        </div>
-      </div>
-    )}
   </div>
 );
   // ========== COMPLETE FARM DATA TAB WITH PARCELS CODE ==========
 
 const renderFarmDataTab = () => (
   <div className="space-y-6">
-    {/* Farming Activity Form */}
-    <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B]">
-      <h3 className="text-gray-200 font-medium mb-4">Farming Activity</h3>
-      
-      {/* Main Crops */}
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-  <div className="flex items-center space-x-3">
-    <input 
-      type="checkbox" 
-      name="rice_checked"
-      checked={isRiceChecked}
-      onChange={(e) => setIsRiceChecked(e.target.checked)}
-      className="h-4 w-4 text-blue-600" 
-    />
-    <label className="text-gray-400">Rice</label>
-    <Input 
-      name="rice_value"
-      value={riceValue}
-      onChange={(e) => setRiceValue(e.target.value)}
-      className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 w-24" 
-      placeholder="Value" 
-    />
-  </div>
-  
-  <div className="space-y-2">
-    <div className="flex items-center space-x-3">
-      <input 
-        type="checkbox" 
-        name="corn_checked"
-        className="h-4 w-4 text-blue-600"
-        checked={isCornChecked}
-        onChange={(e) => {
-          setIsCornChecked(e.target.checked);
-          if (!e.target.checked) {
-            setCornType('');
-          }
-        }}
-      />
-      <label className="text-gray-400">Corn</label>
-      <Input 
-        name="corn_value"
-        value={cornValue}
-        onChange={(e) => setCornValue(e.target.value)}
-        className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 w-24" 
-        placeholder="Value" 
-      />
-    </div>
-    {isCornChecked && (
-      <div className="ml-7 flex items-center space-x-4">
-        <div className="flex items-center">
-          <input 
-            type="radio" 
-            name="cornType" 
-            value="yellow"
-            checked={cornType === 'yellow'}
-            onChange={(e) => setCornType(e.target.value)}
-            className="h-3 w-3 text-blue-600" 
-          />
-          <label className="ml-2 text-gray-400 text-sm">Yellow</label>
-        </div>
-        <div className="flex items-center">
-          <input 
-            type="radio" 
-            name="cornType" 
-            value="white"
-            checked={cornType === 'white'}
-            onChange={(e) => setCornType(e.target.value)}
-            className="h-3 w-3 text-blue-600" 
-          />
-          <label className="ml-2 text-gray-400 text-sm">White</label>
-        </div>
-      </div>
-    )}
-  </div>
-</div>
-
-
-      {/* Other Crops */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-gray-400 font-medium">Other Crops</h4>
-          <Button 
-            type="button"
-            onClick={() => addFormItem(setOtherCrops, otherCrops)}
-            className="bg-blue-600/20 hover:bg-blue-600/20/80 text-gray-200 px-3 py-1 text-xs"
-          >
-            <Plus className="h-3 w-3 mr-1" /> Add Crop
-          </Button>
-        </div>
-        {otherCrops.map((crop) => (
-          <div key={crop.id} className="flex items-center gap-3 mb-2">
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 flex-1" 
-              placeholder="Specify Crop"
-              value={crop.name || ''}
-              onChange={(e) => {
-                const newCrops = otherCrops.map(c => 
-                  c.id === crop.id ? {...c, name: e.target.value} : c
-                );
-                setOtherCrops(newCrops);
-              }}
-            />
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 w-24" 
-              placeholder="Value"
-              value={crop.value || ''}
-              onChange={(e) => {
-                const newCrops = otherCrops.map(c => 
-                  c.id === crop.id ? {...c, value: e.target.value} : c
-                );
-                setOtherCrops(newCrops);
-              }}
-            />
-            <Button 
-              type="button"
-              onClick={() => removeFormItem(setOtherCrops, otherCrops, crop.id)}
-              className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      {/* Livestock */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-gray-400 font-medium">Livestock</h4>
-          <Button 
-            type="button"
-            onClick={() => addFormItem(setLivestock, livestock)}
-            className="bg-blue-600/20 hover:bg-blue-600/20/80 text-gray-200 px-3 py-1 text-xs"
-          >
-            <Plus className="h-3 w-3 mr-1" /> Add Livestock
-          </Button>
-        </div>
-        {livestock.map((animal) => (
-          <div key={animal.id} className="flex items-center gap-3 mb-2">
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 flex-1" 
-              placeholder="Specify Livestock"
-              value={animal.animal || ''}
-              onChange={(e) => {
-                const newLivestock = livestock.map(a => 
-                  a.id === animal.id ? {...a, animal: e.target.value} : a
-                );
-                setLivestock(newLivestock);
-              }}
-            />
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 w-32" 
-              placeholder="No. of Head" 
-              type="number"
-              value={animal.head_count || ''}
-              onChange={(e) => {
-                const newLivestock = livestock.map(a => 
-                  a.id === animal.id ? {...a, head_count: e.target.value} : a
-                );
-                setLivestock(newLivestock);
-              }}
-            />
-            <Button 
-              type="button"
-              onClick={() => removeFormItem(setLivestock, livestock, animal.id)}
-              className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      {/* Poultry */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h4 className="text-gray-400 font-medium">Poultry</h4>
-          <Button 
-            type="button"
-            onClick={() => addFormItem(setPoultry, poultry)}
-            className="bg-blue-600/20 hover:bg-blue-600/20/80 text-gray-200 px-3 py-1 text-xs"
-          >
-            <Plus className="h-3 w-3 mr-1" /> Add Poultry
-          </Button>
-        </div>
-        {poultry.map((bird) => (
-          <div key={bird.id} className="flex items-center gap-3 mb-2">
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 flex-1" 
-              placeholder="Specify Poultry"
-              value={bird.bird || ''}
-              onChange={(e) => {
-                const newPoultry = poultry.map(b => 
-                  b.id === bird.id ? {...b, bird: e.target.value} : b
-                );
-                setPoultry(newPoultry);
-              }}
-            />
-            <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 w-32" 
-              placeholder="No. of Head" 
-              type="number"
-              value={bird.head_count || ''}
-              onChange={(e) => {
-                const newPoultry = poultry.map(b => 
-                  b.id === bird.id ? {...b, head_count: e.target.value} : b
-                );
-                setPoultry(newPoultry);
-              }}
-            />
-            <Button 
-              type="button"
-              onClick={() => removeFormItem(setPoultry, poultry, bird.id)}
-              className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1"
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-
-    {/* Farm Parcel Forms - COMPLETE CODE */}
+    {/* Farm Parcel Forms ONLY – farming activity removed */}
     <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B]">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-gray-200 font-medium">Farm Parcels (Max 3)</h3>
-        <Button 
+        <Button
           type="button"
           onClick={() => addFormItem(setFarmParcels, farmParcels)}
           disabled={farmParcels.length >= 3}
@@ -1432,353 +1366,530 @@ const renderFarmDataTab = () => (
       </div>
 
       {farmParcels.map((parcel, index) => (
-  <div key={parcel.id} className="border border-[#3B3B3B] rounded-md p-4 mb-4 bg-[#1A1A1A]">
-    <div className="flex items-center justify-between mb-3">
-      <h4 className="text-gray-400 font-medium">Farm Parcel {index + 1}</h4>
-      {farmParcels.length > 1 && (
-        <Button 
-          type="button"
-          onClick={() => removeFormItem(setFarmParcels, farmParcels, parcel.id)}
-          className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1 text-xs"
+        <div
+          key={parcel.id}
+          className="border border-[#3B3B3B] rounded-md p-4 mb-4 bg-[#1A1A1A]"
         >
-          <Minus className="h-3 w-3" />
-        </Button>
-      )}
-    </div>
-
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Name of Farmer's in Rotation</label>
-        <Input 
-          className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200" 
-          placeholder="Name of Farmer's in Rotation"
-          value={parcel.farmer_rotation || ''}
-          onChange={(e) => {
-            const newParcels = farmParcels.map(p => 
-              p.id === parcel.id ? {...p, farmer_rotation: e.target.value} : p
-            );
-            setFarmParcels(newParcels);
-          }}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Farm Location</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200" 
-            placeholder="Barangay, City/Municipality"
-            value={parcel.farm_location || ''}
-            onChange={(e) => {
-              const newParcels = farmParcels.map(p => 
-                p.id === parcel.id ? {...p, farm_location: e.target.value} : p
-              );
-              setFarmParcels(newParcels);
-            }}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Total Farm Area (ha)</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200" 
-            placeholder="Total Farm Area" 
-            type="number" 
-            step="0.01"
-            value={parcel.total_area || ''}
-            onChange={(e) => {
-              const newParcels = farmParcels.map(p => 
-                p.id === parcel.id ? {...p, total_area: e.target.value} : p
-              );
-              setFarmParcels(newParcels);
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Ownership Document</label>
-          <select 
-            className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
-            value={parcel.ownership_doc || ''}
-            onChange={(e) => {
-              const newParcels = farmParcels.map(p => 
-                p.id === parcel.id ? {...p, ownership_doc: e.target.value} : p
-              );
-              setFarmParcels(newParcels);
-            }}
-          >
-            <option value="">Select Document</option>
-            {ownershipDocOptions.map(doc => (
-              <option key={doc} value={doc}>{doc}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Ownership Document No.</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200" 
-            placeholder="Document Number"
-            value={parcel.ownership_doc_no || ''}
-            onChange={(e) => {
-              const newParcels = farmParcels.map(p => 
-                p.id === parcel.id ? {...p, ownership_doc_no: e.target.value} : p
-              );
-              setFarmParcels(newParcels);
-            }}
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Ownership Type</label>
-        <select 
-          className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
-          value={parcel.ownership_type || ''}
-          onChange={(e) => {
-            const newParcels = farmParcels.map(p => 
-              p.id === parcel.id ? {...p, ownership_type: e.target.value} : p
-            );
-            setFarmParcels(newParcels);
-          }}
-        >
-          <option value="">Select Ownership Type</option>
-          {ownershipTypeOptions.map(type => (
-            <option key={type} value={type}>{type}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-2 block">Within Ancestral Domain</label>
-          <div className="flex gap-4">
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`ancestral_${parcel.id}`} 
-                checked={parcel.ancestral_domain === 'yes'}
-                onChange={() => {
-                  const newParcels = farmParcels.map(p => 
-                    p.id === parcel.id ? {...p, ancestral_domain: 'yes'} : p
-                  );
-                  setFarmParcels(newParcels);
-                }}
-                className="h-4 w-4 text-blue-600" 
-              />
-              <label className="ml-2 text-gray-400">Yes</label>
-            </div>
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`ancestral_${parcel.id}`} 
-                checked={parcel.ancestral_domain === 'no'}
-                onChange={() => {
-                  const newParcels = farmParcels.map(p => 
-                    p.id === parcel.id ? {...p, ancestral_domain: 'no'} : p
-                  );
-                  setFarmParcels(newParcels);
-                }}
-                className="h-4 w-4 text-blue-600" 
-              />
-              <label className="ml-2 text-gray-400">No</label>
-            </div>
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-gray-400 font-medium">Farm Parcel {index + 1}</h4>
+            {farmParcels.length > 1 && (
+              <Button
+                type="button"
+                onClick={() => removeFormItem(setFarmParcels, farmParcels, parcel.id)}
+                className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1 text-xs"
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+            )}
           </div>
-        </div>
-        <div>
-          <label className="text-sm font-medium text-gray-400 mb-2 block">Agrarian Reform Beneficiary</label>
-          <div className="flex gap-4">
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`reform_${parcel.id}`} 
-                checked={parcel.agrarian_reform === 'yes'}
-                onChange={() => {
-                  const newParcels = farmParcels.map(p => 
-                    p.id === parcel.id ? {...p, agrarian_reform: 'yes'} : p
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium text-gray-400 mb-1 block">
+                Name of Farmer's in Rotation <span className="text-red-500">*</span>
+              </label>
+              <Input
+                className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                placeholder="Name of Farmer's in Rotation"
+                value={parcel.farmer_rotation || ''}
+                onChange={(e) => {
+                  const newParcels = farmParcels.map((p) =>
+                    p.id === parcel.id ? { ...p, farmer_rotation: e.target.value } : p
                   );
                   setFarmParcels(newParcels);
                 }}
-                className="h-4 w-4 text-blue-600" 
+                required
               />
-              <label className="ml-2 text-gray-400">Yes</label>
             </div>
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`reform_${parcel.id}`} 
-                checked={parcel.agrarian_reform === 'no'}
-                onChange={() => {
-                  const newParcels = farmParcels.map(p => 
-                    p.id === parcel.id ? {...p, agrarian_reform: 'no'} : p
+
+            <div>
+              <label className="text-sm font-medium text-gray-400 mb-1 block">
+                Farm Location <span className="text-red-500">*</span>
+              </label>
+              <Input
+                className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                placeholder="Barangay, City/Municipality"
+                value={parcel.farm_location || ''}
+                onChange={(e) => {
+                  const newParcels = farmParcels.map((p) =>
+                    p.id === parcel.id ? { ...p, farm_location: e.target.value } : p
                   );
                   setFarmParcels(newParcels);
                 }}
-                className="h-4 w-4 text-blue-600" 
+                required
               />
-              <label className="ml-2 text-gray-400">No</label>
             </div>
-          </div>
-        </div>
-      </div>
 
-           {/* Farm Parcel Information - COMPLETE WITH DATA BINDING */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <div className="flex items-center justify-between mb-3">
-    <h5 className="text-gray-400 font-medium">Farm Parcel Information (Max 5)</h5>
-    <Button 
-      type="button"
-      onClick={addParcelInfo}
-      disabled={parcelInfo.length >= 5}
-      className="bg-blue-600/20 hover:bg-blue-600/20/80 text-gray-200 px-2 py-1 text-xs disabled:opacity-50"
-    >
-      <Plus className="h-3 w-3 mr-1" /> Add Info
-    </Button>
-  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-1 block">
+                  Ownership Document <span className="text-red-500">*</span>
+                </label>
+                <select
+                  className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
+                  value={parcel.ownership_doc || ''}
+                  onChange={(e) => {
+                    const newParcels = farmParcels.map((p) =>
+                      p.id === parcel.id ? { ...p, ownership_doc: e.target.value, ownership_doc_no: '', ownership_type: '' } : p
+                    );
+                    setFarmParcels(newParcels);
+                  }}
+                  required
+                >
+                  <option value="">Select Document</option>
+                  {ownershipDocOptions.map((doc) => (
+                    <option key={doc} value={doc}>
+                      {doc}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-1 block">
+                  Ownership Document No. <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                  placeholder="Document Number"
+                  value={parcel.ownership_doc_no || ''}
+                  onChange={(e) => {
+                    const newParcels = farmParcels.map((p) =>
+                      p.id === parcel.id ? { ...p, ownership_doc_no: e.target.value } : p
+                    );
+                    setFarmParcels(newParcels);
+                  }}
+                  disabled={!parcel.ownership_doc}
+                  required
+                />
+              </div>
+            </div>
 
-  {parcelInfo.map((info, infoIndex) => (
-    <div key={info.id} className="border border-[#3B3B3B] rounded-md p-3 mb-3 bg-[#1A1A1A]">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-gray-400 text-sm font-medium">Parcel Info {infoIndex + 1}</span>
-        {parcelInfo.length > 1 && (
-          <Button 
-            type="button"
-            onClick={() => removeParcelInfo(info.id)}
-            className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-1 py-1 text-xs"
-          >
-            <Minus className="h-3 w-3" />
-          </Button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-1 block">Crop/Commodity</label>
-          <select 
-            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
-            value={info.crop_commodity || ''}
-            onChange={(e) => {
-              const newParcelInfo = parcelInfo.map(pi => 
-                pi.id === info.id ? {...pi, crop_commodity: e.target.value} : pi
-              );
-              setParcelInfo(newParcelInfo);
-            }}
-          >
-            <option value="">Select</option>
-            {cropCommodityOptions.map(crop => (
-              <option key={crop} value={crop}>{crop}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-1 block">Size (ha)</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm" 
-            type="number" 
-            step="0.01"
-            value={info.size || ''}
-            onChange={(e) => {
-              const newParcelInfo = parcelInfo.map(pi => 
-                pi.id === info.id ? {...pi, size: e.target.value} : pi
-              );
-              setParcelInfo(newParcelInfo);
-            }}
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-1 block">No. of Head</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm" 
-            type="number"
-            value={info.head_count || ''}
-            onChange={(e) => {
-              const newParcelInfo = parcelInfo.map(pi => 
-                pi.id === info.id ? {...pi, head_count: e.target.value} : pi
-              );
-              setParcelInfo(newParcelInfo);
-            }}
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-1 block">Farm Type</label>
-          <select 
-            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
-            value={info.farm_type || ''}
-            onChange={(e) => {
-              const newParcelInfo = parcelInfo.map(pi => 
-                pi.id === info.id ? {...pi, farm_type: e.target.value} : pi
-              );
-              setParcelInfo(newParcelInfo);
-            }}
-          >
-            <option value="">Select</option>
-            {farmTypeOptions.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-2 block">Organic Practitioner</label>
-          <div className="flex gap-3">
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`organic_${info.id}`} 
-                checked={info.organic === 'yes'}
-                onChange={() => {
-                  const newParcelInfo = parcelInfo.map(pi => 
-                    pi.id === info.id ? {...pi, organic: 'yes'} : pi
+            <div>
+              <label className="text-sm font-medium text-gray-400 mb-1 block">
+                Ownership Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
+                value={parcel.ownership_type || ''}
+                onChange={(e) => {
+                  const newParcels = farmParcels.map((p) =>
+                    p.id === parcel.id ? { ...p, ownership_type: e.target.value } : p
                   );
-                  setParcelInfo(newParcelInfo);
+                  setFarmParcels(newParcels);
                 }}
-                className="h-3 w-3 text-blue-600" 
-              />
-              <label className="ml-1 text-gray-400 text-sm">Y</label>
+                disabled={!parcel.ownership_doc}
+                required
+              >
+                <option value="">Select Ownership Type</option>
+                {ownershipTypeOptions.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
-            <div className="flex items-center">
-              <input 
-                type="radio" 
-                name={`organic_${info.id}`} 
-                checked={info.organic === 'no'}
-                onChange={() => {
-                  const newParcelInfo = parcelInfo.map(pi => 
-                    pi.id === info.id ? {...pi, organic: 'no'} : pi
-                  );
-                  setParcelInfo(newParcelInfo);
-                }}
-                className="h-3 w-3 text-blue-600" 
-              />
-              <label className="ml-1 text-gray-400 text-sm">N</label>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-2 block">
+                  Within Ancestral Domain
+                </label>
+                <div className="flex gap-4">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`ancestral_${parcel.id}`}
+                      checked={parcel.ancestral_domain === 'yes'}
+                      onChange={() => {
+                        const newParcels = farmParcels.map((p) =>
+                          p.id === parcel.id ? { ...p, ancestral_domain: 'yes' } : p
+                        );
+                        setFarmParcels(newParcels);
+                      }}
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <label className="ml-2 text-gray-400">Yes</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`ancestral_${parcel.id}`}
+                      checked={parcel.ancestral_domain === 'no'}
+                      onChange={() => {
+                        const newParcels = farmParcels.map((p) =>
+                          p.id === parcel.id ? { ...p, ancestral_domain: 'no' } : p
+                        );
+                        setFarmParcels(newParcels);
+                      }}
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <label className="ml-2 text-gray-400">No</label>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-400 mb-2 block">
+                  Agrarian Reform Beneficiary
+                </label>
+                <div className="flex gap-4">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`reform_${parcel.id}`}
+                      checked={parcel.agrarian_reform === 'yes'}
+                      onChange={() => {
+                        const newParcels = farmParcels.map((p) =>
+                          p.id === parcel.id ? { ...p, agrarian_reform: 'yes' } : p
+                        );
+                        setFarmParcels(newParcels);
+                      }}
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <label className="ml-2 text-gray-400">Yes</label>
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      name={`reform_${parcel.id}`}
+                      checked={parcel.agrarian_reform === 'no'}
+                      onChange={() => {
+                        const newParcels = farmParcels.map((p) =>
+                          p.id === parcel.id ? { ...p, agrarian_reform: 'no' } : p
+                        );
+                        setFarmParcels(newParcels);
+                      }}
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <label className="ml-2 text-gray-400">No</label>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-medium text-gray-400 mb-1 block">Remarks</label>
-          <Input 
-            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm" 
-            placeholder="Remarks"
-            value={info.remarks || ''}
-            onChange={(e) => {
-              const newParcelInfo = parcelInfo.map(pi => 
-                pi.id === info.id ? {...pi, remarks: e.target.value} : pi
-              );
-              setParcelInfo(newParcelInfo);
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
+
+            {/* Farm Parcel Information */}
+            <div className="border-t border-[#3B3B3B] pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h5 className="text-gray-400 font-medium">
+                  Farm Parcel Information (Max 5)
+                </h5>
+                <Button
+                  type="button"
+                  onClick={() => addParcelInfo(parcel.id)}
+                  disabled={parcelInfo.filter(p => p.parcel_id === parcel.id).length >= 5}
+                  className="bg-blue-600/20 hover:bg-blue-600/80 text-gray-200 px-2 py-1 text-xs disabled:opacity-50"
+                >
+                  <Plus className="h-3 w-3 mr-1" /> Add Info
+                </Button>
+              </div>
+
+              {parcelInfo.filter(p => p.parcel_id === parcel.id).map((info, infoIndex) => (
+                <div
+                  key={info.id}
+                  className="border border-[#3B3B3B] rounded-md p-3 mb-3 bg-[#1A1A1A]"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-gray-400 text-sm font-medium">
+                      Parcel Info {infoIndex + 1}
+                    </span>
+                    {parcelInfo.length > 1 && (
+                      <Button
+                        type="button"
+                        onClick={() => removeParcelInfo(info.id)}
+                        className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-1 py-1 text-xs"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Row 1: Crop/Commodity + conditional fields */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-400 mb-1 block">
+                        Crop/Commodity
+                      </label>
+                      <select
+                        className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                        value={info.crop_commodity || ''}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const newParcelInfo = parcelInfo.map((pi) =>
+                            pi.id === info.id
+                              ? {
+                                  ...pi,
+                                  crop_commodity: value,
+                                  crop_name: '',
+                                  animal_name: '',
+                                  size: '',
+                                  head_count: '',
+                                  farm_type: '',
+                                  organic: '',
+                                  remarks: ''
+                                }
+                              : pi
+                          );
+                          setParcelInfo(newParcelInfo);
+                        }}
+                      >
+                        {cropCommodityOptions.map((crop) => (
+                          <option key={crop} value={crop}>
+                            {crop}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* CROPS fields */}
+                    {info.crop_commodity === 'Crops' && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                            Crop Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            list={`cropList-${info.id}`}
+                            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                            placeholder="Search or type crop name..."
+                            value={info.crop_name || ''}
+                            onChange={(e) => {
+                              const newParcelInfo = parcelInfo.map((pi) =>
+                                pi.id === info.id
+                                  ? { ...pi, crop_name: e.target.value, corn_type: e.target.value.includes('Corn') ? pi.corn_type : '' }
+                                  : pi
+                              );
+                              setParcelInfo(newParcelInfo);
+                            }}
+                            required
+                          />
+                          <datalist id={`cropList-${info.id}`}>
+                            {cropNameOptions.map((crop) => (
+                              <option key={crop} value={crop} />
+                            ))}
+                          </datalist>
+                        </div>
+                        {/* Corn Type - only show when Crop Name is Corn */}
+                        {info.crop_name === 'Corn' && (
+                          <div>
+                            <label className="text-xs font-medium text-gray-400 mb-1 block">
+                              Corn Type <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                              value={info.corn_type || ''}
+                              onChange={(e) => {
+                                const newParcelInfo = parcelInfo.map((pi) =>
+                                  pi.id === info.id
+                                    ? { ...pi, corn_type: e.target.value }
+                                    : pi
+                                );
+                                setParcelInfo(newParcelInfo);
+                              }}
+                              required
+                            >
+                              <option value="">Select Type</option>
+                              {cornTypeOptions.map((type) => (
+                                <option key={type} value={type}>
+                                  {type}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <div>
+                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                            Size (ha) <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                            type="number"
+                            step="0.01"
+                            value={info.size || ''}
+                            onChange={(e) => {
+                              const newParcelInfo = parcelInfo.map((pi) =>
+                                pi.id === info.id
+                                  ? { ...pi, size: e.target.value }
+                                  : pi
+                              );
+                              setParcelInfo(newParcelInfo);
+                            }}
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* LIVESTOCK / POULTRY fields */}
+                    {(info.crop_commodity === 'Livestock' ||
+                      info.crop_commodity === 'Poultry') && (
+                      <>
+                        <div>
+                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                            Animal Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            list={`animalList-${info.id}`}
+                            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                            placeholder="Search or type animal name..."
+                            value={info.animal_name || ''}
+                            onChange={(e) => {
+                              const newParcelInfo = parcelInfo.map((pi) =>
+                                pi.id === info.id
+                                  ? { ...pi, animal_name: e.target.value }
+                                  : pi
+                              );
+                              setParcelInfo(newParcelInfo);
+                            }}
+                            required
+                          />
+                          <datalist id={`animalList-${info.id}`}>
+                            {(info.crop_commodity === 'Poultry' ? poultryOptions : livestockOptions).map((animal) => (
+                              <option key={animal} value={animal} />
+                            ))}
+                          </datalist>
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                            No. of Heads
+                          </label>
+                          <Input
+                            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                            type="number"
+                            value={info.head_count || ''}
+                            onChange={(e) => {
+                              const newParcelInfo = parcelInfo.map((pi) =>
+                                pi.id === info.id
+                                  ? { ...pi, head_count: e.target.value }
+                                  : pi
+                              );
+                              setParcelInfo(newParcelInfo);
+                            }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Row 2: Crops – Farm type, organic, remarks */}
+                  {info.crop_commodity === 'Crops' && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          Farm Type <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                          value={info.farm_type || ''}
+                          onChange={(e) => {
+                            const newParcelInfo = parcelInfo.map((pi) =>
+                              pi.id === info.id
+                                ? { ...pi, farm_type: e.target.value }
+                                : pi
+                            );
+                            setParcelInfo(newParcelInfo);
+                          }}
+                        >
+                          <option value="">Select</option>
+                          {farmTypeOptions.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          Organic Practitioner
+                        </label>
+                        <div className="flex gap-3 h-8 items-center">
+                          <div className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`organic_${info.id}`}
+                              checked={info.organic === 'yes'}
+                              onChange={() => {
+                                const newParcelInfo = parcelInfo.map((pi) =>
+                                  pi.id === info.id
+                                    ? { ...pi, organic: 'yes' }
+                                    : pi
+                                );
+                                setParcelInfo(newParcelInfo);
+                              }}
+                              className="h-3 w-3 text-blue-600"
+                            />
+                            <label className="ml-1 text-gray-400 text-sm">Y</label>
+                          </div>
+                          <div className="flex items-center">
+                            <input
+                              type="radio"
+                              name={`organic_${info.id}`}
+                              checked={info.organic === 'no'}
+                              onChange={() => {
+                                const newParcelInfo = parcelInfo.map((pi) =>
+                                  pi.id === info.id
+                                    ? { ...pi, organic: 'no' }
+                                    : pi
+                                );
+                                setParcelInfo(newParcelInfo);
+                              }}
+                              className="h-3 w-3 text-blue-600"
+                            />
+                            <label className="ml-1 text-gray-400 text-sm">N</label>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          Remarks
+                        </label>
+                        <Input
+                          className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                          placeholder="Remarks"
+                          value={info.remarks || ''}
+                          onChange={(e) => {
+                            const newParcelInfo = parcelInfo.map((pi) =>
+                              pi.id === info.id
+                                ? { ...pi, remarks: e.target.value }
+                                : pi
+                            );
+                            setParcelInfo(newParcelInfo);
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Livestock / Poultry: Remarks only */}
+                  {(info.crop_commodity === 'Livestock' ||
+                    info.crop_commodity === 'Poultry') && (
+                    <div className="mt-3">
+                      <label className="text-xs font-medium text-gray-400 mb-1 block">
+                        Remarks
+                      </label>
+                      <Input
+                        className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                        placeholder="Remarks"
+                        value={info.remarks || ''}
+                        onChange={(e) => {
+                          const newParcelInfo = parcelInfo.map((pi) =>
+                            pi.id === info.id
+                              ? { ...pi, remarks: e.target.value }
+                              : pi
+                          );
+                          setParcelInfo(newParcelInfo);
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ))}
     </div>
   </div>
 );
+
  // ========== FISH DATA TAB ==========
  const renderFishDataTab = () => (
   <div className="space-y-6">
@@ -1854,47 +1965,33 @@ const renderFarmDataTab = () => (
 
 const renderFinancialTab = () => (
   <div className="space-y-6">
-    {/* RSBSA Reference Number */}
-    <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">RSBSA Reference Number (if applicable)</label>
-      <Input 
-        name="rsbsa_reference_no"
-        value={formInputs.rsbsa_reference_no}
-        onChange={handleInputChange}
-        className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-        placeholder="RS-YYYY-NNNN" 
-      />
-    </div>
+  
 
     {/* TIN Number */}
     <div>
       <label className="text-sm font-medium text-gray-400 mb-1 block">Tax Identification Number (TIN)</label>
       <Input 
         name="tin_number"
-        value={formInputs.tin_number}
-        onChange={handleInputChange}
+        value={formInputs.tin_number?.replace('XXX-XXX-XXX-XXX', '') || ''}
+        onChange={(e) => {
+          let digits = e.target.value.replace(/\D/g, '');
+          digits = digits.slice(0, 12); // 12 digits max
+          
+          let formatted = '';
+          if (digits.length > 0) formatted += digits.slice(0, 3);
+          if (digits.length > 3) formatted += '-' + digits.slice(3, 6);
+          if (digits.length > 6) formatted += '-' + digits.slice(6, 9);
+          if (digits.length > 9) formatted += '-' + digits.slice(9, 12);
+          
+          setFormInputs(prev => ({ ...prev, tin_number: formatted }));
+        }}
         className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-        placeholder="XXX-XXX-XXX-XXX" 
+        placeholder="000-000-000-000" 
+        maxLength={15}
       />
     </div>
 
-    {/* Profession */}
-    <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Profession</label>
-      <select 
-        name="profession"
-        value={formInputs.profession}
-        onChange={handleInputChange}
-        className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
-      >
-        <option value="">Select</option>
-        <option value="farmer">Farmer</option>
-        <option value="fisherfolk">Fisherfolk</option>
-        <option value="farmworker">Farmworker</option>
-        <option value="agri-youth">Agri-Youth</option>
-        <option value="others">Others</option>
-      </select>
-    </div>
+    
 
     {/* Source of Funds */}
 <div>
@@ -1982,7 +2079,6 @@ const renderPreviewTab = () => {
   ].filter(Boolean).join(' ') || 'Not provided';
   
   const permAddress = [
-    getFormValue('perm_street'),
     selectedBarangay,
     selectedPurok,
     getFormValue('perm_municipality_city'),
@@ -1992,7 +2088,6 @@ const renderPreviewTab = () => {
   
   const presAddress = sameAsPermAddress ? permAddress : 
     [
-      getFormValue('pres_street'),
       selectedBarangayPresent,
       selectedPurokPresent,
       getFormValue('pres_municipality_city'),
@@ -2080,7 +2175,6 @@ const renderPreviewTab = () => {
         {[
           selectedPurok,
           selectedBarangay,
-          formInputs.perm_street,
           formInputs.perm_municipality_city,
           formInputs.perm_province,
           formInputs.perm_region
@@ -2095,7 +2189,6 @@ const renderPreviewTab = () => {
           : [
               selectedPurokPresent,
               selectedBarangayPresent,
-              formInputs.pres_street,
               formInputs.pres_municipality_city,
               formInputs.pres_province,
               formInputs.pres_region
@@ -2208,117 +2301,72 @@ const renderPreviewTab = () => {
   </div>
 </div>
 
-
-        {/* Farm/Registry-Specific Information */}
-{(registryType === 'farmer' || registryType === 'farmworker' || registryType === 'agriyouth') && (
+{/* Farm/Registry-Specific Information */}
+{(registryType === 'farmer' ||
+  registryType === 'farmworker' ||
+  registryType === 'agriyouth') && (
   <div className="border-t border-[#3B3B3B] pt-4">
     <h4 className="text-gray-400 font-medium mb-2">Farm Information</h4>
+
     <div className="space-y-3">
-      
-      {/* Main Crops - Rice & Corn */}
-      {(isRiceChecked || isCornChecked) && (
-        <div>
-          <h5 className="text-gray-400 text-sm mb-2">Main Crops</h5>
-          <div className="flex flex-wrap gap-2">
-            {isRiceChecked && riceValue && (
-              <Badge className="bg-green-600/20 text-green-400">
-                Rice ({riceValue})
-              </Badge>
-            )}
-            {isCornChecked && cornValue && (
-              <Badge className="bg-yellow-600/20 text-yellow-400">
-                Corn - {cornType} ({cornValue})
-              </Badge>
-            )}
-          </div>
-        </div>
-      )}
-      
-      {/* Other Crops */}
-      {otherCrops.length > 0 && otherCrops.some(c => c.name) && (
-        <div>
-          <h5 className="text-gray-400 text-sm mb-2">Other Crops</h5>
-          <div className="flex flex-wrap gap-2">
-            {otherCrops.map((item, index) => (
-              item.name && (
-                <Badge key={index} className="bg-blue-600/20 text-blue-400">
-                  {item.name} {item.value && `(${item.value})`}
-                </Badge>
-              )
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Livestock */}
-      {livestock.length > 0 && livestock.some(l => l.animal) && (
-        <div>
-          <h5 className="text-gray-400 text-sm mb-2">Livestock</h5>
-          <div className="flex flex-wrap gap-2">
-            {livestock.map((item, index) => (
-              item.animal && (
-                <Badge key={index} className="bg-orange-600/20 text-orange-400">
-                  {item.animal} ({item.head_count || 0} heads)
-                </Badge>
-              )
-            ))}
-          </div>
-        </div>
-      )}
-      
-      {/* Poultry */}
-      {poultry.length > 0 && poultry.some(p => p.bird) && (
-        <div>
-          <h5 className="text-gray-400 text-sm mb-2">Poultry</h5>
-          <div className="flex flex-wrap gap-2">
-            {poultry.map((item, index) => (
-              item.bird && (
-                <Badge key={index} className="bg-purple-600/20 text-purple-400">
-                  {item.bird} ({item.head_count || 0} heads)
-                </Badge>
-              )
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* No farming activity message */}
-      {!isRiceChecked && !isCornChecked && 
-       !otherCrops.some(c => c.name) && 
-       !livestock.some(l => l.animal) && 
-       !poultry.some(p => p.bird) && (
-        <span className="text-gray-400 text-sm">No crops/livestock added</span>
-      )}
-
       {/* Farm Parcels */}
       {farmParcels.length > 0 && (
         <div>
-          <h5 className="text-gray-400 text-sm mb-2">Farm Parcels ({farmParcels.length})</h5>
+          <h5 className="text-gray-400 text-sm mb-2">
+            Farm Parcels ({farmParcels.length})
+          </h5>
           <div className="space-y-2">
             {farmParcels.map((parcel, index) => (
-              <div key={parcel.id} className="bg-[#1C1C1C] p-3 rounded border border-[#3B3B3B]">
+              <div
+                key={parcel.id}
+                className="bg-[#1C1C1C] p-3 rounded border border-[#3B3B3B]"
+              >
                 <div className="text-sm text-gray-300 space-y-1">
                   <div>
-                    <span className="font-medium text-gray-200">Parcel {index + 1}:</span>
+                    <span className="font-medium text-gray-200">
+                      Parcel {index + 1}:
+                    </span>
                   </div>
                   {parcel.farmer_rotation && (
                     <div className="text-xs">
-                      <span className="text-gray-400">Farmer:</span> {parcel.farmer_rotation}
+                      <span className="text-gray-400">Farmer: </span>
+                      {parcel.farmer_rotation}
                     </div>
                   )}
                   {parcel.farm_location && (
                     <div className="text-xs">
-                      <span className="text-gray-400">Location:</span> {parcel.farm_location}
+                      <span className="text-gray-400">Location: </span>
+                      {parcel.farm_location}
                     </div>
                   )}
                   {parcel.total_area && (
                     <div className="text-xs">
-                      <span className="text-gray-400">Area:</span> {parcel.total_area} ha
+                      <span className="text-gray-400">Area: </span>
+                      {parcel.total_area} ha
+                    </div>
+                  )}
+                  {parcel.ownership_doc && (
+                    <div className="text-xs">
+                      <span className="text-gray-400">Doc: </span>
+                      {parcel.ownership_doc} {parcel.ownership_doc_no ? `(${parcel.ownership_doc_no})` : ''}
                     </div>
                   )}
                   {parcel.ownership_type && (
                     <div className="text-xs">
-                      <span className="text-gray-400">Ownership:</span> {parcel.ownership_type}
+                      <span className="text-gray-400">Ownership: </span>
+                      {parcel.ownership_type}
+                    </div>
+                  )}
+                  {parcel.ancestral_domain && (
+                    <div className="text-xs">
+                      <span className="text-gray-400">Ancestral Domain: </span>
+                      <span className="capitalize">{parcel.ancestral_domain}</span>
+                    </div>
+                  )}
+                  {parcel.agrarian_reform && (
+                    <div className="text-xs">
+                      <span className="text-gray-400">Agrarian Reform: </span>
+                      <span className="capitalize">{parcel.agrarian_reform}</span>
                     </div>
                   )}
                 </div>
@@ -2327,9 +2375,59 @@ const renderPreviewTab = () => {
           </div>
         </div>
       )}
+
+      {/* Parcel Crop / Commodity Details */}
+      {parcelInfo.length > 0 && parcelInfo.some((p) => p.crop_commodity) && (
+        <div>
+          <h5 className="text-gray-400 text-sm mb-2">
+            Parcel Crop / Commodity Details
+          </h5>
+          <div className="flex flex-wrap gap-2">
+            {parcelInfo.map((info, index) => {
+              if (!info.crop_commodity) return null;
+
+              if (info.crop_commodity === 'Crops') {
+                return (
+                  <Badge
+                    key={info.id || index}
+                    className="bg-green-600/20 text-green-400 text-xs"
+                  >
+                    Crop: {info.crop_name || 'N/A'}
+                    {info.size && ` – ${info.size} ha`}
+                    {info.farm_type && ` – ${info.farm_type}`}
+                    {info.organic === 'yes' && ' – Organic'}
+                    {info.remarks && ` – ${info.remarks}`}
+                  </Badge>
+                );
+              }
+
+              // Livestock or Poultry
+              return (
+                <Badge
+                  key={info.id || index}
+                  className="bg-orange-600/20 text-orange-400 text-xs"
+                >
+                  {info.crop_commodity}: {info.animal_name || 'N/A'}
+                  {info.head_count && ` – ${info.head_count} heads`}
+                  {info.remarks && ` – ${info.remarks}`}
+                </Badge>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* No info message */}
+      {(!farmParcels.length ||
+        !parcelInfo.some((p) => p.crop_commodity)) && (
+        <span className="text-gray-400 text-sm">
+          No farm parcel information added
+        </span>
+      )}
     </div>
   </div>
 )}
+
 
 {/* Fishing Activities (for fisherfolk) */}
 {registryType === 'fisherfolk' && (
@@ -2384,16 +2482,8 @@ const renderPreviewTab = () => {
   <h4 className="text-gray-400 font-medium mb-2">Financial Information</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">RSBSA Number:</span>
-      <span className="text-gray-200">{formInputs.rsbsa_reference_no || 'Not provided'}</span>
-    </div>
-    <div className="flex">
       <span className="text-gray-400 w-36">TIN Number:</span>
       <span className="text-gray-200">{formInputs.tin_number || 'Not provided'}</span>
-    </div>
-    <div className="flex">
-      <span className="text-gray-400 w-36">Profession:</span>
-      <span className="text-gray-200 capitalize">{formInputs.profession || registryType}</span>
     </div>
     <div className="flex">
       <span className="text-gray-400 w-36">Source of Funds:</span>
@@ -2428,7 +2518,7 @@ const renderPreviewTab = () => {
         <div className="flex flex-col items-center text-center">
           <CheckCircle className="h-12 w-12 text-blue-600 mb-4" />
           <h3 className="text-xl font-semibold text-gray-200 mb-2">Registration Successful!</h3>
-          <p className="text-gray-400 mb-6">Your registration has been successfully submitted.</p>
+          <p className="text-gray-400 mb-6">Your registration has been successfully submitted. You will receive a confirmation soon.</p>
           <Button 
             onClick={closeModal}
             className="bg-blue-600 hover:bg-blue-600/80 text-blue-600-foreground px-6 py-2 rounded-md"
@@ -2574,6 +2664,12 @@ const renderPreviewTab = () => {
                 >
                   <i className="fas fa-arrow-left mr-2"></i> Previous
                 </Button>
+                <div className="flex flex-col items-end gap-2">
+                  {submitError && (
+                    <div className="text-red-500 text-sm mb-2">
+                      {submitError}
+                    </div>
+                  )}
                 <Button 
   onClick={handleSubmit}
   className="bg-blue-600/20 hover:bg-blue-600/80 text-gray-200 px-6 py-2 rounded-md"
@@ -2589,6 +2685,7 @@ const renderPreviewTab = () => {
     </>
   )}
 </Button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

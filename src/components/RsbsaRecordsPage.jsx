@@ -960,7 +960,11 @@ const RsbsaRecordsPage = () => {
                     </div>
                     <div className="col-span-2">
                       <label className={`text-sm ${subTextClass}`}>Crops</label>
-                      <p className={textClass}>{viewingRecord.crops}</p>
+                      <p className={textClass}>
+                        {viewingRecord.fullData?.crops
+                          ?.map((c) => `${c.name}${c.value_text ? ` (${c.value_text})` : ''}`)
+                          .join(", ") || "N/A"}
+                      </p>
                     </div>
                     <div className="col-span-2">
                       <label className={`text-sm ${subTextClass}`}>Livestock</label>

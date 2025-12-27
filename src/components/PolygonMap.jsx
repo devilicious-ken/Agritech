@@ -1,7 +1,7 @@
 // src/components/PolygonMap.jsx
 'use client';
 
-import { MapContainer, TileLayer, GeoJSON, Polygon, Popup, Tooltip } from 'react-leaflet';
+import { MapContainer, TileLayer, GeoJSON, Polygon, Popup, Tooltip, LayersControl } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/api';
@@ -321,11 +321,42 @@ export default function PolygonMap({ onPolygonClick, selectedPurok, isZoomed, on
         zoomControl={false}
         ref={mapRef}
         onClick={handleMapClick}
+        attributionControl={false}
       >
-        {/* Satellite base layer (Esri World Imagery) */}
-        <TileLayer
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-        />
+        <LayersControl position="topright">
+          {/* Satellite base layer (Esri World Imagery) */}
+          <LayersControl.BaseLayer checked name="Satellite (ESRI)">
+            <TileLayer
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              attribution="Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* OpenStreetMap */}
+          <LayersControl.BaseLayer name="OpenStreetMap">
+            <TileLayer
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors"
+            />
+          </LayersControl.BaseLayer>
+
+          {/* Dark Mode (CartoDB Dark Matter) */}
+          <LayersControl.BaseLayer name="Dark Mode">
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+              attribution="&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors &copy; <a href='https://carto.com/attributions'>CARTO</a>"
+            />
+          </LayersControl.BaseLayer>
+
+          
+          {/* Heat Map Style (OpenTopoMap as a proxy for 'heat map' distinct style or Stamen Toner if available, let's use OpenTopoMap for terrain/heat context) */}
+          <LayersControl.BaseLayer name="Heat Map (Terrain)">
+             <TileLayer
+              url="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png"
+              attribution="Map data: &copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors, <a href='http://viewfinderpanoramas.org'>SRTM</a> | Map style: &copy; <a href='https://opentopomap.org'>OpenTopoMap</a> (<a href='https://creativecommons.org/licenses/by-sa/3.0/'>CC-BY-SA</a>)"
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
 
         {/* draw polygons once loaded */}
         {geoData && (
