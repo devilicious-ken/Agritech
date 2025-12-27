@@ -13,12 +13,13 @@ const RegisterPage = ({ user }) => {  // <-- ADDED user prop
   const [isHouseholdHead, setIsHouseholdHead] = useState(true);
   const [civilStatus, setCivilStatus] = useState('');
   const [sameAsPermAddress, setSameAsPermAddress] = useState(false);
-  const [hasGovId, setHasGovId] = useState(false);
+  // Government ID is now always required - removed hasGovId state
   const [isPwd, setIsPwd] = useState(false);
   const [is4ps, setIs4ps] = useState(false);
   const [isIndigenous, setIsIndigenous] = useState(false);
   const [isMemberCoop, setIsMemberCoop] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false); // Track if data has been loaded
   
   const [isRiceChecked, setIsRiceChecked] = useState(false);
   const [isCornChecked, setIsCornChecked] = useState(false);
@@ -44,7 +45,22 @@ const [farmParcels, setFarmParcels] = useState([
 ]);
 
 // Extended parcelInfo to include crop_name / animal_name / corn_type
-const [parcelInfo, setParcelInfo] = useState([]);
+// Initialize with one parcel info for the first farm parcel
+const [parcelInfo, setParcelInfo] = useState([
+  {
+    id: Date.now(),
+    parcel_id: Date.now(), // Links to the first farm parcel
+    crop_commodity: 'Crops',
+    crop_name: '',
+    corn_type: '',
+    animal_name: '',
+    size: '',
+    head_count: '',
+    farm_type: '',
+    organic: '',
+    remarks: ''
+  }
+]);
 
   const [otherCrops, setOtherCrops] = useState([]);
   const [livestock, setLivestock] = useState([]);
@@ -117,6 +133,93 @@ React.useEffect(() => {
   }
 }, [sameAsPermAddress, selectedBarangay, selectedPurok, formInputs.perm_municipality_city, formInputs.perm_province, formInputs.perm_region]);
 
+// Load form data from localStorage on component mount
+React.useEffect(() => {
+  try {
+    const savedFormData = localStorage.getItem('registerFormData');
+    if (savedFormData) {
+      const parsed = JSON.parse(savedFormData);
+      
+      // Restore all form states
+      if (parsed.formInputs) setFormInputs(parsed.formInputs);
+      if (parsed.registryType) setRegistryType(parsed.registryType);
+      if (parsed.civilStatus) setCivilStatus(parsed.civilStatus);
+      if (parsed.religion) setReligion(parsed.religion);
+      if (parsed.selectedBarangay) setSelectedBarangay(parsed.selectedBarangay);
+      if (parsed.selectedPurok) setSelectedPurok(parsed.selectedPurok);
+      if (parsed.selectedBarangayPresent) setSelectedBarangayPresent(parsed.selectedBarangayPresent);
+      if (parsed.selectedPurokPresent) setSelectedPurokPresent(parsed.selectedPurokPresent);
+      if (typeof parsed.sameAsPermAddress === 'boolean') setSameAsPermAddress(parsed.sameAsPermAddress);
+      if (typeof parsed.isHouseholdHead === 'boolean') setIsHouseholdHead(parsed.isHouseholdHead);
+      if (typeof parsed.isPwd === 'boolean') setIsPwd(parsed.isPwd);
+      if (typeof parsed.is4ps === 'boolean') setIs4ps(parsed.is4ps);
+      if (typeof parsed.isIndigenous === 'boolean') setIsIndigenous(parsed.isIndigenous);
+      if (typeof parsed.isMemberCoop === 'boolean') setIsMemberCoop(parsed.isMemberCoop);
+      if (parsed.riceValue) setRiceValue(parsed.riceValue);
+      if (parsed.cornValue) setCornValue(parsed.cornValue);
+      if (typeof parsed.isRiceChecked === 'boolean') setIsRiceChecked(parsed.isRiceChecked);
+      if (typeof parsed.isCornChecked === 'boolean') setIsCornChecked(parsed.isCornChecked);
+      if (parsed.cornType) setCornType(parsed.cornType);
+      if (parsed.otherCrops) setOtherCrops(parsed.otherCrops);
+      if (parsed.livestock) setLivestock(parsed.livestock);
+      if (parsed.poultry) setPoultry(parsed.poultry);
+      if (parsed.farmParcels) setFarmParcels(parsed.farmParcels);
+      if (parsed.parcelInfo) setParcelInfo(parsed.parcelInfo);
+      if (parsed.fishingActivities) setFishingActivities(parsed.fishingActivities);
+      if (parsed.fishingCheckboxes) setFishingCheckboxes(parsed.fishingCheckboxes);
+    }
+  } catch (error) {
+    console.error('Error loading saved form data:', error);
+  } finally {
+    // Mark as initialized whether we loaded data or not
+    setIsInitialized(true);
+  }
+}, []);
+
+// Save form data to localStorage whenever it changes (but only after initialization)
+React.useEffect(() => {
+  // Don't save during initial load
+  if (!isInitialized) return;
+  
+  const formData = {
+    formInputs,
+    registryType,
+    civilStatus,
+    religion,
+    selectedBarangay,
+    selectedPurok,
+    selectedBarangayPresent,
+    selectedPurokPresent,
+    sameAsPermAddress,
+    isHouseholdHead,
+    isPwd,
+    is4ps,
+    isIndigenous,
+    isMemberCoop,
+    riceValue,
+    cornValue,
+    isRiceChecked,
+    isCornChecked,
+    cornType,
+    otherCrops,
+    livestock,
+    poultry,
+    farmParcels,
+    parcelInfo,
+    fishingActivities,
+    fishingCheckboxes
+  };
+  
+  localStorage.setItem('registerFormData', JSON.stringify(formData));
+}, [
+  isInitialized,
+  formInputs, registryType, civilStatus, religion, selectedBarangay, selectedPurok,
+  selectedBarangayPresent, selectedPurokPresent, sameAsPermAddress, isHouseholdHead,
+  isPwd, is4ps, isIndigenous, isMemberCoop, riceValue, cornValue, isRiceChecked,
+  isCornChecked, cornType, otherCrops, livestock, poultry, farmParcels, parcelInfo,
+  fishingActivities, fishingCheckboxes
+]);
+
   // <-- ADDED: Submission states (ONLY 2 LINES)
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -133,13 +236,37 @@ React.useEffect(() => {
   const addFormItem = (setter, currentArray) => {
     if (currentArray.length < 3) {
       const newId = Math.max(...currentArray.map(item => item.id)) + 1;
-      setter([...currentArray, { id: newId }]);
+      const newItem = { id: newId };
+      setter([...currentArray, newItem]);
+      
+      // If adding a farm parcel, also add a default parcel info entry
+      if (setter === setFarmParcels) {
+        const newParcelInfo = {
+          id: Date.now() + Math.random(), // Ensure unique ID
+          parcel_id: newId,
+          crop_commodity: 'Crops',
+          crop_name: '',
+          corn_type: '',
+          animal_name: '',
+          size: '',
+          head_count: '',
+          farm_type: '',
+          organic: '',
+          remarks: ''
+        };
+        setParcelInfo(prev => [...prev, newParcelInfo]);
+      }
     }
   };
 
   const removeFormItem = (setter, currentArray, id) => {
     if (currentArray.length > 1) {
       setter(currentArray.filter(item => item.id !== id));
+      
+      // If removing a farm parcel, also remove its parcel info entries
+      if (setter === setFarmParcels) {
+        setParcelInfo(prev => prev.filter(info => info.parcel_id !== id));
+      }
     }
   };
 
@@ -290,6 +417,7 @@ const handleSubmit = async () => {
     const registrantData = {
       user_id: null,
       registry: registryType,
+      reference_no: formInputs.reference_no || null,
       surname: formInputs.surname || null,
       first_name: formInputs.first_name || null,
       middle_name: formInputs.middle_name || null,
@@ -311,9 +439,9 @@ const handleSubmit = async () => {
       is_4ps: is4ps,
       is_indigenous: isIndigenous,
       indigenous_group_name: isIndigenous ? formInputs.indigenous_group_name || null : null,
-      has_government_id: hasGovId,
-      government_id_type: hasGovId ? formInputs.government_id_type || null : null,
-      government_id_number: hasGovId ? formInputs.government_id_number || null : null,
+      has_government_id: true,
+      government_id_type: formInputs.government_id_type || null,
+      government_id_number: formInputs.government_id_number || null,
       is_member_coop: isMemberCoop,
       coop_name: isMemberCoop ? formInputs.coop_name || null : null,
       emergency_contact_name: formInputs.emergency_contact_name || null,
@@ -563,7 +691,7 @@ const handleSubmit = async () => {
     setSelectedPurokPresent('');
     setSameAsPermAddress(false);
     setIsHouseholdHead(true);
-    setHasGovId(false);
+    // Government ID is now required - no need to reset hasGovId
     setIsPwd(false);
     setIs4ps(false);
     setIsIndigenous(false);
@@ -600,6 +728,9 @@ const handleSubmit = async () => {
     setActiveTab('personal');
     setShowSuccessModal(true);
     setIsSubmitting(false);
+    
+    // Clear localStorage after successful submission
+    localStorage.removeItem('registerFormData');
 
   } catch (error) {
     console.error('ERROR:', error);
@@ -608,11 +739,72 @@ const handleSubmit = async () => {
   }
 };
 
-
+  // Clear all form fields
+  const clearAllFields = () => {
+    setFormInputs({
+      reference_no: '', surname: '', first_name: '', middle_name: '', extension_name: '', sex: '',
+      mobile_number: '', landline_number: '', date_of_birth: '', place_of_birth: '', mother_full_name: '', spouse_name: '',
+      perm_municipality_city: '', perm_province: '', perm_region: '',
+      pres_municipality_city: '', pres_province: '', pres_region: '',
+      highest_education: '', rsbsa_reference_no: '', tin_number: '', profession: '', source_of_funds: '', income_farming: '', income_non_farming: '',
+      emergency_contact_name: '', emergency_contact_phone: '', government_id_type: '', government_id_number: '', coop_name: '', indigenous_group_name: ''
+    });
+    setReligion('');
+    setCivilStatus('');
+    setSelectedBarangay('');
+    setSelectedPurok('');
+    setSelectedBarangayPresent('');
+    setSelectedPurokPresent('');
+    setSameAsPermAddress(false);
+    setIsHouseholdHead(true);
+    setIsPwd(false);
+    setIs4ps(false);
+    setIsIndigenous(false);
+    setIsMemberCoop(false);
+    setRiceValue('');
+    setCornValue('');
+    setIsRiceChecked(false);
+    setIsCornChecked(false);
+    setCornType('');
+    setOtherCrops([{ id: Date.now(), name: '', value: '' }]);
+    setLivestock([{ id: Date.now(), animal: '', head_count: '' }]);
+    setPoultry([{ id: Date.now(), bird: '', head_count: '' }]);
+    const initialParcelId = Date.now();
+    setFarmParcels([{
+      id: initialParcelId, 
+      farmer_rotation: '', 
+      farm_location: '', 
+      total_area: '', 
+      ownership_doc: '', 
+      ownership_doc_no: '',
+      ownership_type: '', 
+      ancestral_domain: '', 
+      agrarian_reform: ''
+    }]);
+    setParcelInfo([{
+      id: Date.now(),
+      parcel_id: initialParcelId,
+      crop_commodity: 'Crops',
+      crop_name: '',
+      corn_type: '',
+      animal_name: '',
+      size: '',
+      head_count: '',
+      farm_type: '',
+      organic: '',
+      remarks: ''
+    }]);
+    setFishingActivities([{ id: Date.now(), activity: '' }]);
+    setFishingCheckboxes({
+      fish_capture: false, aquaculture: false, gleaning: false, fish_processing: false, fish_vending: false
+    });
+    setActiveTab('personal');
+    setSubmitError(null);
+    
+    // Clear localStorage
+    localStorage.removeItem('registerFormData');
+  };
   
-  
-  
-
   const closeModal = () => {
     setShowSuccessModal(false);
     setActiveTab('personal'); // Reset to first tab after successful submission
@@ -2168,34 +2360,17 @@ const renderPreviewTab = () => {
           {/* Address Information - READ FROM STATE */}
 <div className="border-t border-[#3B3B3B] pt-4">
   <h4 className="text-gray-400 font-medium mb-2">Address Information</h4>
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
-    <div>
-      <h5 className="text-gray-400 text-sm mb-1">Permanent Address</h5>
-      <p className="text-gray-200">
-        {[
-          selectedPurok,
-          selectedBarangay,
-          formInputs.perm_municipality_city,
-          formInputs.perm_province,
-          formInputs.perm_region
-        ].filter(Boolean).join(', ') || 'Not provided'}
-      </p>
-    </div>
-    <div>
-      <h5 className="text-gray-400 text-sm mb-1">Present Address</h5>
-      <p className="text-gray-200">
-        {sameAsPermAddress 
-          ? 'Same as permanent address'
-          : [
-              selectedPurokPresent,
-              selectedBarangayPresent,
-              formInputs.pres_municipality_city,
-              formInputs.pres_province,
-              formInputs.pres_region
-            ].filter(Boolean).join(', ') || 'Not provided'
-        }
-      </p>
-    </div>
+  <div>
+    <h5 className="text-gray-400 text-sm mb-1">Permanent Address</h5>
+    <p className="text-gray-200">
+      {[
+        selectedPurok,
+        selectedBarangay,
+        formInputs.perm_municipality_city,
+        formInputs.perm_province,
+        formInputs.perm_region
+      ].filter(Boolean).join(', ') || 'Not provided'}
+    </p>
   </div>
 </div>
 
@@ -2257,21 +2432,13 @@ const renderPreviewTab = () => {
       </div>
     )}
     <div className="flex">
-      <span className="text-gray-400 w-36">Has Gov't ID:</span>
-      <span className="text-gray-200">{hasGovId ? 'Yes' : 'No'}</span>
+      <span className="text-gray-400 w-36">ID Type:</span>
+      <span className="text-gray-200">{formInputs.government_id_type || 'Not provided'}</span>
     </div>
-    {hasGovId && (
-      <>
-        <div className="flex">
-          <span className="text-gray-400 w-36">ID Type:</span>
-          <span className="text-gray-200">{formInputs.government_id_type || 'Not provided'}</span>
-        </div>
-        <div className="flex">
-          <span className="text-gray-400 w-36">ID Number:</span>
-          <span className="text-gray-200">{formInputs.government_id_number || 'Not provided'}</span>
-        </div>
-      </>
-    )}
+    <div className="flex">
+      <span className="text-gray-400 w-36">ID Number:</span>
+      <span className="text-gray-200">{formInputs.government_id_number || 'Not provided'}</span>
+    </div>
     <div className="flex">
       <span className="text-gray-400 w-36">Coop Member:</span>
       <span className="text-gray-200">{isMemberCoop ? 'Yes' : 'No'}</span>
@@ -2309,64 +2476,84 @@ const renderPreviewTab = () => {
     <h4 className="text-gray-400 font-medium mb-2">Farm Information</h4>
 
     <div className="space-y-3">
-      {/* Farm Parcels */}
-      {farmParcels.length > 0 && (
-        <div>
-          <h5 className="text-gray-400 text-sm mb-2">
-            Farm Parcels ({farmParcels.length})
-          </h5>
-          <div className="space-y-2">
+      {/* Farm / Parcel Information */}
+      {registryType === 'farmer' && farmParcels.length > 0 && (
+        <div className="border-t border-[#3B3B3B] pt-4">
+          <h4 className="text-gray-400 font-medium mb-2">Farm Parcel Information</h4>
+          
+          {/* Total Hectares */}
+          <div className="mb-3 p-3 bg-[#1A1A1A] rounded-md border border-[#3B3B3B]">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-400 font-medium">Total Farm Area:</span>
+              <span className="text-blue-400 font-semibold text-lg">
+                {parcelInfo
+                  .filter(info => info.crop_commodity === 'Crops' && info.size)
+                  .reduce((sum, info) => sum + parseFloat(info.size || 0), 0)
+                  .toFixed(2)} ha
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-4">
             {farmParcels.map((parcel, index) => (
               <div
                 key={parcel.id}
-                className="bg-[#1C1C1C] p-3 rounded border border-[#3B3B3B]"
+                className="border border-[#3B3B3B] rounded-md p-3 bg-[#1A1A1A]"
               >
-                <div className="text-sm text-gray-300 space-y-1">
-                  <div>
-                    <span className="font-medium text-gray-200">
-                      Parcel {index + 1}:
+                <h5 className="text-gray-400 font-medium mb-2">
+                  Parcel {index + 1}
+                </h5>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Rotation:</span>
+                    <span className="text-gray-200">
+                      {parcel.farmer_rotation || 'N/A'}
                     </span>
                   </div>
-                  {parcel.farmer_rotation && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Farmer: </span>
-                      {parcel.farmer_rotation}
-                    </div>
-                  )}
-                  {parcel.farm_location && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Location: </span>
-                      {parcel.farm_location}
-                    </div>
-                  )}
-                  {parcel.total_area && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Area: </span>
-                      {parcel.total_area} ha
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">Location:</span>
+                    <span className="text-gray-200">
+                      {parcel.farm_location || 'N/A'}
+                    </span>
+                  </div>
                   {parcel.ownership_doc && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Doc: </span>
-                      {parcel.ownership_doc} {parcel.ownership_doc_no ? `(${parcel.ownership_doc_no})` : ''}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Ownership Doc:</span>
+                      <span className="text-gray-200">
+                        {parcel.ownership_doc}
+                      </span>
+                    </div>
+                  )}
+                  {parcel.ownership_doc_no && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Doc No:</span>
+                      <span className="text-gray-200">
+                        {parcel.ownership_doc_no}
+                      </span>
                     </div>
                   )}
                   {parcel.ownership_type && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Ownership: </span>
-                      {parcel.ownership_type}
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Ownership:</span>
+                      <span className="text-gray-200">
+                        {parcel.ownership_type}
+                      </span>
                     </div>
                   )}
                   {parcel.ancestral_domain && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Ancestral Domain: </span>
-                      <span className="capitalize">{parcel.ancestral_domain}</span>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Ancestral Domain:</span>
+                      <span className="capitalize">
+                        {parcel.ancestral_domain}
+                      </span>
                     </div>
                   )}
                   {parcel.agrarian_reform && (
-                    <div className="text-xs">
-                      <span className="text-gray-400">Agrarian Reform: </span>
-                      <span className="capitalize">{parcel.agrarian_reform}</span>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Agrarian Reform:</span>
+                      <span className="capitalize">
+                        {parcel.agrarian_reform}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -2562,8 +2749,20 @@ const renderPreviewTab = () => {
       
       <Card className="bg-[#252525] border-0 shadow-md">
         <CardHeader>
-          <CardTitle className="text-gray-200 text-xl">Register New RSBSA - {registryType.charAt(0).toUpperCase() + registryType.slice(1)}</CardTitle>
-          <CardDescription className="text-gray-400">Fill in the details to register a new {registryType}</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-gray-200 text-xl">Register New RSBSA - {registryType.charAt(0).toUpperCase() + registryType.slice(1)}</CardTitle>
+              <CardDescription className="text-gray-400">Fill in the details to register a new {registryType}</CardDescription>
+            </div>
+            <Button
+              type="button"
+              onClick={clearAllFields}
+              variant="outline"
+              className="border-red-600/50 bg-red-600/10 hover:bg-red-600/20 text-red-400 hover:text-red-300"
+            >
+              <i className="fas fa-trash mr-2"></i> Clear Fields
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
