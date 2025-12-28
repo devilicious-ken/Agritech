@@ -418,6 +418,64 @@ async getUserIpAddress() {
   }
 },
 
+// ===== DASHBOARD DATA FUNCTIONS =====
+
+async getAllRegistrants() {
+  try {
+    const { data, error } = await supabase
+      .from('registrants')
+      .select('*, addresses(*)');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all registrants:', error);
+    throw error;
+  }
+},
+
+async getAllCrops() {
+  try {
+    const { data, error } = await supabase
+      .from('crops')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all crops:', error);
+    throw error;
+  }
+},
+
+async getAllLivestock() {
+  try {
+    const { data, error } = await supabase
+      .from('livestock')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all livestock:', error);
+    throw error;
+  }
+},
+
+async getAllPoultry() {
+  try {
+    const { data, error } = await supabase
+      .from('poultry')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all poultry:', error);
+    throw error;
+  }
+},
+
 };
 
 export default ApiService;
