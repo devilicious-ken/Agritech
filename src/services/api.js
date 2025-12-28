@@ -35,13 +35,12 @@ logout() {
 
 async generateReferenceNo() {
   try {
-    const currentYear = new Date().getFullYear();
-    const yearPrefix = `RS-${currentYear}-`;
+    const fixedPrefix = '10-43-11-';
 
     const { data, error } = await supabase
       .from('registrants')
       .select('reference_no')
-      .like('reference_no', `${yearPrefix}%`)
+      .like('reference_no', `${fixedPrefix}%`)
       .order('reference_no', { ascending: false })
       .limit(1);
 
@@ -51,12 +50,18 @@ async generateReferenceNo() {
 
     if (data && data.length > 0 && data[0].reference_no) {
       const lastRefNo = data[0].reference_no;
-      const lastNumber = parseInt(lastRefNo.split('-')[2]);
-      nextNumber = lastNumber + 1;
+      // Extract the numeric part after the prefix (remove dashes)
+      // Format: 10-43-11-XXX-XXXXXX
+      const numericPart = lastRefNo.replace(fixedPrefix, '').replace('-', '');
+      nextNumber = parseInt(numericPart) + 1;
     }
 
-    const formattedNumber = String(nextNumber).padStart(4, '0');
-    return `${yearPrefix}${formattedNumber}`;
+    // Format as XXX-XXXXXX (9 total digits with dash after first 3)
+    const paddedNumber = String(nextNumber).padStart(9, '0');
+    const firstPart = paddedNumber.substring(0, 3);
+    const secondPart = paddedNumber.substring(3, 9);
+    
+    return `${fixedPrefix}${firstPart}-${secondPart}`;
   } catch (error) {
     console.error('Error generating reference number:', error);
     throw error;
@@ -67,13 +72,11 @@ async generateReferenceNo() {
 
 async createRegistrant(data) {
   try {
-    const referenceNo = await this.generateReferenceNo();
-    
     const { data: result, error } = await supabase
       .from('registrants')
       .insert([{ 
-        ...data, 
-        reference_no: referenceNo,
+        ...data,
+        // reference_no is now provided by the user via the form
         status: 'Created' // ✅ Set initial status
       }])
       .select()
