@@ -136,18 +136,9 @@ const TopNavigation = ({
                 )}
               </div>
             </div>
-            <DropdownMenuItem className="cursor-pointer hover:bg-muted/20 transition-colors">
+            <DropdownMenuItem className="cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setCurrentPage("profile")}>
               <i className="fas fa-user mr-2 text-muted-foreground"></i>
               <span>Profile</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer hover:bg-muted/20 transition-colors"
-              onClick={() => {
-                setCurrentPage("settings");
-              }}
-            >
-              <i className="fas fa-cog mr-2 text-muted-foreground"></i>
-              <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer hover:bg-muted/20 transition-colors"
