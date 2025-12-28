@@ -12,8 +12,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import ApiService from "../services/api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ApiService, { supabase } from "../services/api";
 import { ThemeContext } from "../App";
+import EditableViewModal from "./EditableViewModal"; // ✅ NEW: Editable View Modal component
 
 // ✅ Modal Component - Moved outside to prevent re-creation on every render
 const Modal = React.memo(({ show, onClose, title, children, size = "md" }) => {
@@ -35,7 +37,7 @@ const Modal = React.memo(({ show, onClose, title, children, size = "md" }) => {
   const modalContainerClass = isDark
     ? "bg-[#1e1e1e] border border-[#333333] shadow-2xl"
     : "bg-card text-card-foreground border-0 shadow-2xl";
-  
+
   const headerBorderClass = isDark ? "border-[#333333]" : "border-border/50";
   const titleClass = isDark ? "text-white" : "text-foreground";
   const closeBtnClass = isDark
@@ -109,6 +111,46 @@ const RsbsaRecordsPage = () => {
   const itemsPerPage = 10;
 
   // State for database data
+  // Dropdown Options
+  const extensionOptions = ['Sr.', 'Jr.', 'I', 'II', 'III', 'IV', 'V', 'VI'];
+  const civilStatusOptions = ['Single', 'Married', 'Widowed', 'Separated', 'Annulled', 'Common-law/Live-in'];
+  const educationOptions = ['None', 'Elementary', 'High School', 'Vocational', 'College', 'Post Graduate'];
+  const religionOptions = ['Roman Catholic', 'Islam', 'Iglesia ni Cristo', 'Protestant', 'Buddhist', 'Hindu', 'Other'];
+  const governmentIdOptions = ['PhilID / ePhilID', 'GSIS', 'SSS', 'PhilHealth', 'Voter\'s ID', 'Driver\'s License', 'PRC License', 'Passport', 'Senior Citizen ID', 'PWD ID', 'Postal ID', 'TIN ID', 'Barangay ID', 'Company ID', 'School ID'];
+
+  // Farm & Crop Options
+  const ownershipTypeOptions = ['Registered Owner', 'Tenant', 'Lessee', 'Mortgage', 'Others'];
+  const ownershipDocOptions = ['OCT/TCT', 'Tax Declaration', 'Certificate of Land Transfer', 'Emancipation Patent', 'CLOA', 'Barangay Certification', 'None'];
+  const farmTypeOptions = ['Irrigated', 'Rainfed Upland', 'Rainfed Lowland'];
+
+  // Crop & Animal Lists
+  const cropNameOptions = [
+    'Ampalaya', 'Broccoli', 'Cabbage', 'Carrot', 'Cauliflower', 'Eggplant (Talong)', 'Ginger', 'Gourd (Upo/Patola)', 'Lettuce', 'Okra',
+    'Pechay (Native)', 'Pechay (Chinese/Bok choy)', 'Pepper (Chili/Bell)', 'Squash (Kalabasa)', 'String beans/Sitaw', 'Tomato',
+    'Sweet potato (Kamote)', 'Cassava', 'Ube (Purple yam)', 'Gabi (Taro)', 'Singkamas', 'Spring onions', 'Celery', 'Mustard (Mustasa)',
+    'Onion', 'Onion (bunching)', 'Cucumber', 'Radish (Labanos)', 'Spinach', 'Corn', 'Peas/Sweet peas', 'Beans (bush/pole)',
+    'Peanut', 'Mung bean (Munggo)', 'Garlic (Bawang)', 'Kangkong (Water spinach)', 'Alugbati (Malabar spinach)', 'Patola (Sponge gourd)',
+    'Sayote (Chayote)',
+    'Banana', 'Mango', 'Pineapple', 'Papaya', 'Rambutan', 'Lanzones', 'Durian', 'Guava', 'Pomelo', 'Citrus (Calamansi/Oranges)',
+    'Mangosteen', 'Watermelon', 'Melon (Cantaloupe)', 'Coconut (Niyog)', 'Jackfruit (Langka)', 'Calamansi', 'Avocado',
+    'Guyabano (Soursop)', 'Atis (Sugar apple)', 'Chico (Sapodilla)', 'Dalandan (Orange)',
+    'Coffee', 'Rubber', 'Cashew', 'Sugarcane', 'Rice', 'Abaca', 'Cacao', 'Tobacco'
+  ];
+  const cornTypeOptions = ['Yellow', 'White'];
+  const poultryOptions = ['Chicken', 'Duck', 'Turkey', 'Gamefowl'];
+  const livestockOptions = ['Carabao', 'Cattle/Cow', 'Goat', 'Pig/Swine', 'Sheep', 'Horse'];
+
+  // Address Options
+  const barangayOptions = ['Upper Jasaan', 'Lower Jasaan']; // Example - Expand as needed or fetch dynamic
+  // Simplified Purok logic for demo (or copy complete map if available)
+  const getPurokOptions = (barangay) => {
+    // Basic mock based on RegisterPage
+    if (barangay === 'Upper Jasaan') return ['Purok 1', 'Purok 2'];
+    if (barangay === 'Lower Jasaan') return ['Purok A', 'Purok B'];
+    return [];
+  };
+  const regionOptions = ['Region 1 - Ilocos', 'Region 2 - Cagayan Valley', 'Region 3 - Central Luzon', 'Region 4A - CALABARZON', 'Region 4B - MIMAROPA', 'Region 5 - Bicol', 'Region 6 - Western Visayas', 'Region 7 - Central Visayas', 'Region 8 - Eastern Visayas', 'Region 9 - Zamboanga Peninsula', 'Region 10 - Northern Mindanao', 'Region 11 - Davao', 'Region 12 - SOCCSKSARGEN', 'Region 13 - Caraga', 'NCR - National Capital Region', 'CAR - Cordillera', 'BARMM - Bangsamoro'];
+
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -120,10 +162,9 @@ const RsbsaRecordsPage = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  // ✅ Edit modal states
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingRecord, setEditingRecord] = useState(null);
-  const [editFormData, setEditFormData] = useState({});
+  // ✅ Editable View Modal states (replaces old Edit Modal)
+  const [editedData, setEditedData] = useState({}); // Track changes in View Modal
+  const [hasChanges, setHasChanges] = useState(false); // Show Save button when true
   const [isSaving, setIsSaving] = useState(false);
 
   // Fetch data on component mount
@@ -313,98 +354,200 @@ const RsbsaRecordsPage = () => {
 
   const handleViewRecord = (record) => {
     setViewingRecord(record);
+    setEditedData({}); // Initialize empty - changes will be tracked here
+    setHasChanges(false); // No changes initially
     setShowViewModal(true);
   };
 
-  // ✅ Handle edit click - populate form with current data
-  const handleEditClick = (record) => {
-    setEditingRecord(record);
-    setEditFormData({
-      // Personal Info
-      first_name: record.fullData?.first_name || "",
-      middle_name: record.fullData?.middle_name || "",
-      surname: record.fullData?.surname || "",
-      sex: record.fullData?.sex || "",
-      date_of_birth: record.fullData?.date_of_birth || "",
-      place_of_birth: record.fullData?.place_of_birth || "",
-      civil_status: record.fullData?.civil_status || "",
-      religion: record.fullData?.religion || "",
-      spouse_name: record.fullData?.spouse_name || "",
-      // Contact
-      mobile_number: record.fullData?.mobile_number || "",
-      landline_number: record.fullData?.landline_number || "",
-      // Household
-      is_household_head: record.fullData?.is_household_head || false,
-      household_members_count: record.fullData?.household_members_count || "",
-      household_males: record.fullData?.household_males || "",
-      household_females: record.fullData?.household_females || "",
-      // Government
-      has_government_id: record.fullData?.has_government_id || false,
-      government_id_type: record.fullData?.government_id_type || "",
-      is_pwd: record.fullData?.is_pwd || false,
-      is_4ps: record.fullData?.is_4ps || false,
-      is_indigenous: record.fullData?.is_indigenous || false,
-      indigenous_group_name: record.fullData?.indigenous_group_name || "",
-    });
-    setShowEditModal(true);
+
+
+  // ✅ NEW: Cancel changes in View Modal
+  const handleCancelChanges = () => {
+    setEditedData({});
+    setHasChanges(false);
   };
 
-  // Helper function to clean form data
-  const cleanFormData = (data) => {
-    const cleaned = {};
-
-    for (const [key, value] of Object.entries(data)) {
-      // Convert empty strings to null
-      if (value === "") {
-        cleaned[key] = null;
-      } else {
-        cleaned[key] = value;
-      }
-    }
-
-    return cleaned;
-  };
-
-  const handleSaveEdit = async () => {
+  // ✅ NEW: Save changes from View Modal
+  const handleSaveChanges = async (editedData) => {
     try {
       setIsSaving(true);
-
       const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-      const ipAddress = await ApiService.getUserIpAddress();
+      const fullData = viewingRecord.fullData || {};
 
-      // ✅ Clean all empty strings to null
-      const cleanedData = cleanFormData(editFormData);
+      console.log("💾 Saving updates:", editedData);
 
-      const result = await ApiService.updateRegistrant(
-        editingRecord.dbId,
-        cleanedData,
-        currentUser.id,
-        `${currentUser.first_name} ${currentUser.last_name}`
-      );
+      // 1. Root Registrant Updates
+      const registrantUpdates = {};
+      const specialPrefixes = ['present_', 'permanent_', 'farm_parcels', 'financial_infos'];
+      const specialKeys = ['tin_number', 'source_of_funds', 'income_farming', 'income_non_farming'];
 
-      await ApiService.createActivityLog(
-        currentUser.id,
-        `${currentUser.first_name} ${currentUser.last_name}`,
-        "Update",
-        `${editingRecord.id} (${editingRecord.name})`,
-        ipAddress
-      );
+      Object.keys(editedData).forEach(key => {
+        if (!specialPrefixes.some(pref => key.startsWith(pref)) && !specialKeys.includes(key)) {
+          registrantUpdates[key] = editedData[key];
+        }
+      });
 
+      if (Object.keys(registrantUpdates).length > 0) {
+        await ApiService.updateRegistrant(
+          viewingRecord.dbId,
+          registrantUpdates,
+          currentUser.id,
+          `${currentUser.first_name} ${currentUser.last_name}`
+        );
+      }
+
+      // 2. Addresses Updates
+      const kinds = ['permanent', 'present'];
+      for (const kind of kinds) {
+        const addressUpdates = {};
+        let kindChanged = false;
+        ['barangay', 'purok', 'municipality_city', 'province', 'region'].forEach(field => {
+          const key = `${kind}_${field}`;
+          if (editedData[key] !== undefined) {
+            addressUpdates[field] = editedData[key];
+            kindChanged = true;
+          }
+        });
+
+        if (kindChanged) {
+          const existing = (fullData.addresses || []).find(a => a.kind === kind);
+          if (existing) {
+            await ApiService.updateResource('addresses', existing.id, addressUpdates);
+          } else {
+            await ApiService.createAddress({
+              ...addressUpdates,
+              registrant_id: viewingRecord.dbId,
+              kind
+            });
+          }
+        }
+      }
+
+      // 3. Financial Info Updates
+      const finUpdates = {};
+      let finChanged = false;
+      ['tin_number', 'source_of_funds', 'income_farming', 'income_non_farming'].forEach(field => {
+        if (editedData[field] !== undefined) {
+          finUpdates[field] = editedData[field];
+          finChanged = true;
+        }
+      });
+
+      if (finChanged) {
+        const existing = (fullData.financial_infos || [])[0];
+        if (existing) {
+          await ApiService.updateResource('financial_infos', existing.id, finUpdates);
+        } else {
+          await ApiService.createFinancialInfo({
+            ...finUpdates,
+            registrant_id: viewingRecord.dbId
+          });
+        }
+      }
+
+      // 4. Farm Parcels Update
+      if (editedData.farm_parcels) {
+        const currentParcels = fullData.farm_parcels || [];
+        const newParcels = editedData.farm_parcels;
+
+        // Delete removed parcels
+        for (const existing of currentParcels) {
+          if (!newParcels.some(np => np.id === existing.id)) {
+            await ApiService.deleteResource('farm_parcels', existing.id);
+          }
+        }
+
+        // Update or Create parcels
+        for (const parcel of newParcels) {
+          const parcelData = {
+            registrant_id: viewingRecord.dbId,
+            farmers_in_rotation: parcel.farmers_in_rotation || null,
+            farm_location: parcel.farm_location || null,
+            total_farm_area_ha: parcel.total_farm_area_ha || null,
+            ownership_document: parcel.ownership_document || null,
+            ownership_document_no: parcel.ownership_document_no || null,
+            ownership: parcel.ownership || null,
+            within_ancestral_domain: parcel.within_ancestral_domain === true,
+            agrarian_reform_beneficiary: parcel.agrarian_reform_beneficiary === true
+          };
+
+          const isNew = typeof parcel.id === 'number' && parcel.id > 1000000000000;
+
+          if (!isNew && currentParcels.some(cp => cp.id === parcel.id)) {
+            await ApiService.updateResource('farm_parcels', parcel.id, parcelData);
+          } else if (isNew) {
+            await ApiService.createFarmParcel(parcelData);
+          }
+        }
+
+        // 5. Production Data Sync (Crops, Livestock, Poultry)
+        const allNewCrops = [];
+        const allNewLivestock = [];
+        const allNewPoultry = [];
+
+        newParcels.forEach(p => {
+          (p.parcel_infos || []).forEach(info => {
+            if (info.crop_commodity === 'Crops' && info.crop_name) {
+              allNewCrops.push({
+                id: info.dbId || info.id,
+                name: info.crop_name,
+                value_text: info.size || "",
+                corn_type: info.corn_type || null
+              });
+            } else if (info.crop_commodity === 'Livestock' && info.animal_name) {
+              allNewLivestock.push({
+                id: info.dbId || info.id,
+                animal: info.animal_name,
+                head_count: parseInt(info.head_count) || 0
+              });
+            } else if (info.crop_commodity === 'Poultry' && info.animal_name) {
+              allNewPoultry.push({
+                id: info.dbId || info.id,
+                bird: info.animal_name,
+                head_count: parseInt(info.head_count) || 0
+              });
+            }
+          });
+        });
+
+        const syncTable = async (table, currentItems, newItems, fields) => {
+          for (const existing of currentItems) {
+            if (!newItems.some(ni => ni.id === existing.id)) {
+              await ApiService.deleteResource(table, existing.id);
+            }
+          }
+          for (const item of newItems) {
+            const itemData = { registrant_id: viewingRecord.dbId };
+            fields.forEach(f => itemData[f] = item[f]);
+            const isNew = typeof item.id === 'string' || (typeof item.id === 'number' && item.id > 1000000000000);
+            if (!isNew && currentItems.some(ci => ci.id === item.id)) {
+              await ApiService.updateResource(table, item.id, itemData);
+            } else {
+              await ApiService.createResource(table, itemData);
+            }
+          }
+        };
+
+        await syncTable('crops', fullData.crops || [], allNewCrops, ['name', 'value_text', 'corn_type']);
+        await syncTable('livestock', fullData.livestock || [], allNewLivestock, ['animal', 'head_count']);
+        await syncTable('poultry', fullData.poultry || [], allNewPoultry, ['bird', 'head_count']);
+      }
+
+      // Refresh data and close modal
       await fetchRegistrants();
-
-      setShowEditModal(false);
-      setEditingRecord(null);
-      setIsSaving(false);
-
-      setSuccessMessage("Record updated successfully!");
+      setSuccessMessage("Record updated successfully");
       setShowSuccessModal(true);
+      setShowViewModal(false);
+      setEditedData({});
+      setHasChanges(false);
     } catch (error) {
-      console.error("❌ Error updating record:", error);
-      setIsSaving(false);
+      console.error("Error updating record:", error);
       setErrorMessage(
         error.message || "Failed to update record. Please try again."
       );
       setShowErrorModal(true);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -603,12 +746,13 @@ const RsbsaRecordsPage = () => {
                       />
                     </TableHead>
                   )}
-                  <TableHead className={subTextClass}>Reference ID</TableHead>
+                  <TableHead className={subTextClass}>Reference Number</TableHead>
                   <TableHead className={subTextClass}>Name</TableHead>
                   <TableHead className={subTextClass}>Address</TableHead>
                   <TableHead className={subTextClass}>Type</TableHead>
                   <TableHead className={subTextClass}>Phone</TableHead>
                   <TableHead className={subTextClass}>Registered On</TableHead>
+                  <TableHead className={subTextClass}>Set Location</TableHead>
                   <TableHead className={subTextClass}>Status</TableHead>
                   <TableHead className={`${subTextClass} text-right`}>
                     Actions
@@ -619,7 +763,7 @@ const RsbsaRecordsPage = () => {
                 {paginatedRecords.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={showDeleteMode ? 9 : 8}
+                      colSpan={showDeleteMode ? 10 : 9}
                       className={`text-center ${subTextClass} py-8`}
                     >
                       No records found
@@ -660,6 +804,13 @@ const RsbsaRecordsPage = () => {
                       </TableCell>
                       <TableCell className={`${subTextClass} text-sm`}>
                         {record.registeredOn}
+                      </TableCell>
+                      <TableCell>
+                        {record.fullData?.farm_parcels?.some(p => p.latitude && p.longitude) ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-0">Yes</Badge>
+                        ) : (
+                          <Badge className="bg-gray-500/10 text-gray-600 border-0">No</Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge className={getStatusBadgeColor(record.status)}>
@@ -808,736 +959,21 @@ const RsbsaRecordsPage = () => {
         </div>
       </Modal>
 
-      {/* ✅ View Record Modal */}
-      {showViewModal && viewingRecord && (
-        <Modal
-          show={showViewModal}
-          onClose={() => setShowViewModal(false)}
-          title="Registrant Details"
-          size="3xl"
-        >
-          <div className="space-y-6 max-h-[70vh] overflow-y-auto">
-            {/* Personal Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-user mr-2"></i> Personal Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Reference ID</label>
-                  <p className={`${textClass} font-mono`}>{viewingRecord.id}</p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Registry Type</label>
-                  <p>
-                    <Badge className={getTypeBadgeColor(viewingRecord.type)}>
-                      {viewingRecord.type}
-                    </Badge>
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <label className={`text-sm ${subTextClass}`}>Full Name</label>
-                  <p className={textClass}>{viewingRecord.name}</p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Sex</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.sex || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Date of Birth</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.date_of_birth
-                      ? formatDate(viewingRecord.fullData.date_of_birth)
-                      : "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    Place of Birth
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.place_of_birth || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Civil Status</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.civil_status || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Religion</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.religion || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Spouse Name</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.spouse_name || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
+      {/* ✅ NEW: Editable View Modal Component */}
+      <EditableViewModal
+        show={showViewModal}
+        record={viewingRecord}
+        onClose={() => {
+          setShowViewModal(false);
+          setViewingRecord(null);
+        }}
+        onSave={handleSaveChanges}
+        getStatusBadgeColor={getStatusBadgeColor}
+        getTypeBadgeColor={getTypeBadgeColor}
+        formatDate={formatDate}
+      />
 
-            {/* Contact Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-phone mr-2"></i> Contact Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Mobile Number</label>
-                  <p className={textClass}>{viewingRecord.phone}</p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    Landline Number
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.landline_number || "N/A"}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <label className={`text-sm ${subTextClass}`}>Address</label>
-                  <p className={textClass}>{viewingRecord.address}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Household Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-home mr-2"></i> Household Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    Household Head
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.is_household_head ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Total Members</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.household_members_count || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Males</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.household_males || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Females</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.household_females || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Farm/Fishing Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-tractor mr-2"></i>{" "}
-                {viewingRecord.type === "Farmer" ? "Farm" : "Fishing"}{" "}
-                Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                {viewingRecord.type === "Farmer" && (
-                  <>
-                    <div>
-                      <label className={`text-sm ${subTextClass}`}>
-                        Total Farm Size
-                      </label>
-                      <p className={textClass}>{viewingRecord.farmSize}</p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className={`text-sm ${subTextClass}`}>Crops</label>
-                      <p className={textClass}>
-                        {viewingRecord.fullData?.crops
-                          ?.map((c) => `${c.name}${c.value_text ? ` (${c.value_text})` : ''}`)
-                          .join(", ") || "N/A"}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className={`text-sm ${subTextClass}`}>Livestock</label>
-                      <p className={textClass}>
-                        {viewingRecord.fullData?.livestock
-                          ?.map((l) => `${l.animal} (${l.head_count})`)
-                          .join(", ") || "N/A"}
-                      </p>
-                    </div>
-                    <div className="col-span-2">
-                      <label className={`text-sm ${subTextClass}`}>Poultry</label>
-                      <p className={textClass}>
-                        {viewingRecord.fullData?.poultry
-                          ?.map((p) => `${p.bird} (${p.head_count})`)
-                          .join(", ") || "N/A"}
-                      </p>
-                    </div>
-                  </>
-                )}
-                {viewingRecord.type === "Fisherfolk" && (
-                  <div className="col-span-2">
-                    <label className={`text-sm ${subTextClass}`}>
-                      Fishing Activities
-                    </label>
-                    <p className={textClass}>
-                      {viewingRecord.fullData?.fishing_activities
-                        ?.map((f) => f.activity)
-                        .join(", ") || "N/A"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Government IDs & Benefits Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-id-card mr-2"></i> Government IDs &
-                Benefits
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    Has Government ID
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.has_government_id ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>ID Type</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.government_id_type || "N/A"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>PWD</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.is_pwd ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    4Ps Beneficiary
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.is_4ps ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Indigenous</label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.is_indigenous ? "Yes" : "No"}
-                  </p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>
-                    Indigenous Group
-                  </label>
-                  <p className={textClass}>
-                    {viewingRecord.fullData?.indigenous_group_name || "N/A"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Registration Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-calendar mr-2"></i> Registration
-                Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Registered On</label>
-                  <p className={textClass}>{viewingRecord.registeredOn}</p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Last Modified</label>
-                  <p className={textClass}>{viewingRecord.modifiedOn}</p>
-                </div>
-                <div>
-                  <label className={`text-sm ${subTextClass}`}>Status</label>
-                  <p>
-                    <Badge
-                      className={getStatusBadgeColor(viewingRecord.status)}
-                    >
-                      {viewingRecord.status}
-                    </Badge>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className={`flex justify-between pt-4 border-t ${tableBorderClass} mt-6`}>
-            <Button
-              onClick={() => setShowViewModal(false)}
-              className={`${secondaryBtnClass} !rounded-button`}
-            >
-              <i className="fas fa-times mr-2"></i> Close
-            </Button>
-            <Button
-              onClick={() => handleEditClick(viewingRecord)}
-              className="bg-blue-600 hover:bg-blue-700 text-white !rounded-button"
-            >
-              <i className="fas fa-edit mr-2"></i> Edit Record
-            </Button>
-          </div>
-        </Modal>
-      )}
-
-      {/* ✅ Edit Record Modal */}
-      {showEditModal && editingRecord && (
-        <Modal
-          show={showEditModal}
-          onClose={() => {
-            if (!isSaving) {
-              setShowEditModal(false);
-              setEditingRecord(null);
-            }
-          }}
-          title="Edit Registrant"
-          size="3xl"
-        >
-          <div className="space-y-6 max-h-[75vh] overflow-y-auto">
-            {/* Loading Overlay */}
-            {isSaving && (
-              <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg z-10">
-                <div className="text-center">
-                  <i className="fas fa-spinner fa-spin text-4xl text-white mb-3"></i>
-                  <p className="text-white font-medium">Saving changes...</p>
-                </div>
-              </div>
-            )}
-
-            {/* Personal Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-user mr-2"></i> Personal Information
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    First Name *
-                  </label>
-                  <Input
-                    value={editFormData.first_name}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        first_name: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Middle Name
-                  </label>
-                  <Input
-                    value={editFormData.middle_name}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        middle_name: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Surname *
-                  </label>
-                  <Input
-                    value={editFormData.surname}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        surname: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Sex *
-                  </label>
-                  <select
-                    value={editFormData.sex}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, sex: e.target.value })
-                    }
-                    className={`${inputClass} w-full rounded-md px-3 py-2 outline-none`}
-                    disabled={isSaving}
-                  >
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Date of Birth
-                  </label>
-                  <Input
-                    type="date"
-                    value={editFormData.date_of_birth}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        date_of_birth: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Place of Birth
-                  </label>
-                  <Input
-                    value={editFormData.place_of_birth}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        place_of_birth: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Civil Status
-                  </label>
-                  <select
-                    value={editFormData.civil_status}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        civil_status: e.target.value,
-                      })
-                    }
-                    className={`${inputClass} w-full rounded-md px-3 py-2 outline-none`}
-                    disabled={isSaving}
-                  >
-                    <option value="">Select</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Widowed">Widowed</option>
-                    <option value="Separated">Separated</option>
-                  </select>
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Religion
-                  </label>
-                  <Input
-                    value={editFormData.religion}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        religion: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Spouse Name
-                  </label>
-                  <Input
-                    value={editFormData.spouse_name}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        spouse_name: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-phone mr-2"></i> Contact Information
-              </h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Mobile Number
-                  </label>
-                  <Input
-                    value={editFormData.mobile_number}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        mobile_number: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Landline Number
-                  </label>
-                  <Input
-                    value={editFormData.landline_number}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        landline_number: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Household Information Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-home mr-2"></i> Household Information
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editFormData.is_household_head}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_household_head: e.target.checked,
-                      })
-                    }
-                    className={`w-4 h-4 rounded ${isDark ? 'bg-[#333333] border-gray-600' : 'bg-white border-input'} focus:ring-blue-500 mr-2`}
-                    disabled={isSaving}
-                  />
-                  <label className={`text-sm ${subTextClass}`}>
-                    Household Head
-                  </label>
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Total Members
-                  </label>
-                  <Input
-                    type="number"
-                    value={editFormData.household_members_count}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        household_members_count: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Males
-                  </label>
-                  <Input
-                    type="number"
-                    value={editFormData.household_males}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        household_males: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Females
-                  </label>
-                  <Input
-                    type="number"
-                    value={editFormData.household_females}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        household_females: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Government IDs & Benefits Section */}
-            <div>
-              <h4 className={`text-lg font-semibold ${textClass} mb-3 border-b ${tableBorderClass} pb-2`}>
-                <i className="fas fa-id-card mr-2"></i> Government IDs &
-                Benefits
-              </h4>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editFormData.has_government_id}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        has_government_id: e.target.checked,
-                      })
-                    }
-                    className={`w-4 h-4 rounded ${isDark ? 'bg-[#333333] border-gray-600' : 'bg-white border-input'} focus:ring-blue-500 mr-2`}
-                    disabled={isSaving}
-                  />
-                  <label className={`text-sm ${subTextClass}`}>
-                    Has Government ID
-                  </label>
-                </div>
-                <div className="col-span-2">
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    ID Type
-                  </label>
-                  <Input
-                    value={editFormData.government_id_type}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        government_id_type: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving || !editFormData.has_government_id}
-                  />
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editFormData.is_pwd}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_pwd: e.target.checked,
-                      })
-                    }
-                    className={`w-4 h-4 rounded ${isDark ? 'bg-[#333333] border-gray-600' : 'bg-white border-input'} focus:ring-blue-500 mr-2`}
-                    disabled={isSaving}
-                  />
-                  <label className={`text-sm ${subTextClass}`}>PWD</label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editFormData.is_4ps}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_4ps: e.target.checked,
-                      })
-                    }
-                    className={`w-4 h-4 rounded ${isDark ? 'bg-[#333333] border-gray-600' : 'bg-white border-input'} focus:ring-blue-500 mr-2`}
-                    disabled={isSaving}
-                  />
-                  <label className={`text-sm ${subTextClass}`}>
-                    4Ps Beneficiary
-                  </label>
-                </div>
-                <div className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={editFormData.is_indigenous}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        is_indigenous: e.target.checked,
-                      })
-                    }
-                    className={`w-4 h-4 rounded ${isDark ? 'bg-[#333333] border-gray-600' : 'bg-white border-input'} focus:ring-blue-500 mr-2`}
-                    disabled={isSaving}
-                  />
-                  <label className={`text-sm ${subTextClass}`}>Indigenous</label>
-                </div>
-                <div className="col-span-3">
-                  <label className={`block text-sm ${subTextClass} mb-1`}>
-                    Indigenous Group Name
-                  </label>
-                  <Input
-                    value={editFormData.indigenous_group_name}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        indigenous_group_name: e.target.value,
-                      })
-                    }
-                    className={inputClass}
-                    disabled={isSaving || !editFormData.is_indigenous}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className={`flex justify-between pt-4 border-t ${tableBorderClass} mt-6`}>
-            <Button
-              onClick={() => {
-                setShowEditModal(false);
-                setEditingRecord(null);
-              }}
-              className={`${secondaryBtnClass} !rounded-button`}
-              disabled={isSaving}
-            >
-              <i className="fas fa-times mr-2"></i> Cancel
-            </Button>
-            <Button
-              onClick={handleSaveEdit}
-              className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 !rounded-button"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <i className="fas fa-spinner fa-spin mr-2"></i> Saving...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-save mr-2"></i> Save Changes
-                </>
-              )}
-            </Button>
-          </div>
-        </Modal>
-      )}
+      {/* Success Modal */}
       {showSuccessModal && (
         <Modal
           show={showSuccessModal}
@@ -1551,7 +987,7 @@ const RsbsaRecordsPage = () => {
               Operation Successful
             </h3>
             <p className={`${subTextClass} mb-4`}>
-              {successMessage || "Records have been deleted successfully."}
+              {successMessage || "Operation completed successfully."}
             </p>
             <Button
               className="bg-green-600 hover:bg-green-700 text-white !rounded-button"
@@ -1559,7 +995,6 @@ const RsbsaRecordsPage = () => {
                 setShowSuccessModal(false);
                 setShowErrorModal(false);
                 setShowViewModal(false);
-                setShowEditModal(false);
                 setShowDeleteModal(false);
               }}
             >
@@ -1568,6 +1003,8 @@ const RsbsaRecordsPage = () => {
           </div>
         </Modal>
       )}
+
+      {/* Error Modal */}
       {showErrorModal && (
         <Modal
           show={showErrorModal}
@@ -1581,7 +1018,7 @@ const RsbsaRecordsPage = () => {
               Operation Failed
             </h3>
             <p className={`${subTextClass} mb-4`}>
-              {errorMessage || "An error occurred while deleting records."}
+              {errorMessage || "An error occurred."}
             </p>
             <Button
               className="bg-red-600 hover:bg-red-700 text-white !rounded-button"
@@ -1592,7 +1029,8 @@ const RsbsaRecordsPage = () => {
           </div>
         </Modal>
       )}
-    </div>
+
+    </div >
   );
 };
 
