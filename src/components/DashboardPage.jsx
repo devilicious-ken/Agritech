@@ -9,25 +9,242 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import * as echarts from "echarts";
+import ApiService from '../services/api';
 
 const DashboardPage = ({ user, isSidebarCollapsed }) => {
   const [selectedArea, setSelectedArea] = useState(null);
   const [modalType, setModalType] = useState(null); // 'crops' or 'animals'
   const [showWelcome, setShowWelcome] = useState(true);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
+  // Real data from database
+  const [dashboardData, setDashboardData] = useState({
+    totalFarmers: 0,
+    totalFisherfolks: 0,
+    totalCrops: 0,
+    totalAnimals: 0,
+    genderData: {
+      maleFarmers: 0,
+      femaleFarmers: 0,
+      maleFisherfolks: 0,
+      femaleFisherfolks: 0
+    },
+    monthlyData: {
+      farmers: Array(12).fill(0),
+      fisherfolks: Array(12).fill(0)
+    },
+    productionByArea: {},
+    detailedProductionData: {},
+    topPuroks: [],
+    loading: true
+  });
 
   useEffect(() => {
     setShowWelcome(true);
     const timer = setTimeout(() => setShowWelcome(false), 1800);
     return () => clearTimeout(timer);
   }, []);
+  
+  // Fetch real data from database
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        // Fetch all registrants
+        const registrants = await ApiService.getAllRegistrants();
+        
+        // Calculate statistics (always current totals)
+        const farmers = registrants.filter(r => r.registry === 'farmer' && !r.deleted_at);
+        const fisherfolks = registrants.filter(r => r.registry === 'fisherfolk' && !r.deleted_at);
+        
+        const maleFarmers = farmers.filter(r => r.sex?.toLowerCase() === 'male').length;
+        const femaleFarmers = farmers.filter(r => r.sex?.toLowerCase() === 'female').length;
+        const maleFisherfolks = fisherfolks.filter(r => r.sex?.toLowerCase() === 'male').length;
+        const femaleFisherfolks = fisherfolks.filter(r => r.sex?.toLowerCase() === 'female').length;
+        
+        // Calculate monthly registration trends for selected year
+        const monthlyData = {
+          farmers: Array(12).fill(0),
+          fisherfolks: Array(12).fill(0)
+        };
+        
+        registrants.forEach(r => {
+          if (r.created_at && !r.deleted_at) {
+            const createdDate = new Date(r.created_at);
+            if (createdDate.getFullYear() === selectedYear) {
+              const month = createdDate.getMonth(); // 0-11
+              if (r.registry === 'farmer') {
+                monthlyData.farmers[month]++;
+              } else if (r.registry === 'fisherfolk') {
+                monthlyData.fisherfolks[month]++;
+              }
+            }
+          }
+        });
+        
+        // Fetch crops and animals
+        const crops = await ApiService.getAllCrops();
+        const livestock = await ApiService.getAllLivestock();
+        const poultry = await ApiService.getAllPoultry();
+        
+        const activeCrops = crops.filter(c => !c.deleted_at);
+        const activeLivestock = livestock.filter(l => !l.deleted_at);
+        const activePoultry = poultry.filter(p => !p.deleted_at);
+        
+        const totalAnimals = activeLivestock.reduce((sum, l) => sum + (l.head_count || 0), 0) +
+                            activePoultry.reduce((sum, p) => sum + (p.head_count || 0), 0);
+        
+        // Calculate production by area (barangay)
+        const productionByArea = {};
+        
+        // Helper to get registrant's barangay and purok
+        const getLocation = (registrantId) => {
+          const registrant = registrants.find(r => r.id === registrantId);
+          if (registrant && registrant.addresses && registrant.addresses[0]) {
+            return {
+              barangay: registrant.addresses[0].barangay || 'Unknown',
+              purok: registrant.addresses[0].purok || 'Unknown'
+            };
+          }
+          return { barangay: 'Unknown', purok: 'Unknown' };
+        };
+        
+        // Calculate detailed data for modal (crops by barangay, purok, and type)
+        const detailedProductionData = {};
+        
+        // Group crops by barangay -> crop type -> purok
+        activeCrops.forEach(crop => {
+          const { barangay, purok } = getLocation(crop.registrant_id);
+          // Use 'name' field for crops
+          const cropType = crop.name || 'Other';
+          
+          if (!detailedProductionData[barangay]) {
+            detailedProductionData[barangay] = { crops: {}, animals: {} };
+          }
+          if (!detailedProductionData[barangay].crops[cropType]) {
+            detailedProductionData[barangay].crops[cropType] = {};
+          }
+          if (!detailedProductionData[barangay].crops[cropType][purok]) {
+            detailedProductionData[barangay].crops[cropType][purok] = 0;
+          }
+          detailedProductionData[barangay].crops[cropType][purok]++;
+          
+          // Count for production by area
+          if (!productionByArea[barangay]) {
+            productionByArea[barangay] = { crops: 0, animals: 0 };
+          }
+          productionByArea[barangay].crops++;
+        });
+        
+        // Group animals by barangay -> animal type -> purok
+        // Process livestock (uses 'animal' field)
+        activeLivestock.forEach(animal => {
+          const { barangay, purok } = getLocation(animal.registrant_id);
+          const animalType = animal.animal || 'Other';
+          
+          if (!detailedProductionData[barangay]) {
+            detailedProductionData[barangay] = { crops: {}, animals: {} };
+          }
+          if (!detailedProductionData[barangay].animals[animalType]) {
+            detailedProductionData[barangay].animals[animalType] = {};
+          }
+          if (!detailedProductionData[barangay].animals[animalType][purok]) {
+            detailedProductionData[barangay].animals[animalType][purok] = 0;
+          }
+          detailedProductionData[barangay].animals[animalType][purok] += (animal.head_count || 1);
+          
+          // Count for production by area
+          if (!productionByArea[barangay]) {
+            productionByArea[barangay] = { crops: 0, animals: 0 };
+          }
+          productionByArea[barangay].animals++;
+        });
+        
+        // Process poultry (uses 'bird' field)
+        activePoultry.forEach(bird => {
+          const { barangay, purok } = getLocation(bird.registrant_id);
+          const birdType = bird.bird || 'Other';
+          
+          if (!detailedProductionData[barangay]) {
+            detailedProductionData[barangay] = { crops: {}, animals: {} };
+          }
+          if (!detailedProductionData[barangay].animals[birdType]) {
+            detailedProductionData[barangay].animals[birdType] = {};
+          }
+          if (!detailedProductionData[barangay].animals[birdType][purok]) {
+            detailedProductionData[barangay].animals[birdType][purok] = 0;
+          }
+          detailedProductionData[barangay].animals[birdType][purok] += (bird.head_count || 1);
+          
+          // Count for production by area
+          if (!productionByArea[barangay]) {
+            productionByArea[barangay] = { crops: 0, animals: 0 };
+          }
+          productionByArea[barangay].animals++;
+        });
+        
+        // Calculate top 5 puroks by registrant count for selected year
+        const purokCounts = {};
+        registrants.forEach(r => {
+          if (r.deleted_at) return; // Skip deleted registrants
+          
+          // Filter by selected year
+          if (r.created_at) {
+            const createdDate = new Date(r.created_at);
+            if (createdDate.getFullYear() !== selectedYear) return;
+          }
+          
+          if (r.addresses && r.addresses[0]) {
+            const barangay = r.addresses[0].barangay || 'Unknown';
+            const purok = r.addresses[0].purok || 'Unknown';
+            const key = `${purok} (${barangay})`;
+            if (!purokCounts[key]) {
+              purokCounts[key] = 0;
+            }
+            purokCounts[key]++;
+          }
+        });
+        
+        // Sort and get top 5
+        const topPuroks = Object.entries(purokCounts)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 5)
+          .map(([name, count]) => ({ name, count }));
+        
+        setDashboardData({
+          totalFarmers: farmers.length,
+          totalFisherfolks: fisherfolks.length,
+          totalCrops: activeCrops.length,
+          totalAnimals: totalAnimals,
+          genderData: {
+            maleFarmers,
+            femaleFarmers,
+            maleFisherfolks,
+            femaleFisherfolks
+          },
+          monthlyData,
+          productionByArea,
+          detailedProductionData,
+          topPuroks,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+        setDashboardData(prev => ({ ...prev, loading: false }));
+      }
+    };
+    
+    fetchDashboardData();
+  }, [selectedYear]); // Re-fetch when year changes
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      initCharts();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []);
+    // Initialize charts after data is loaded
+    if (!dashboardData.loading) {
+      const timer = setTimeout(() => {
+        initCharts();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [dashboardData]); // Re-initialize when data changes
 
   useEffect(() => {
     // whenever sidebar collapses/expands, resize all charts
@@ -39,14 +256,16 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
   // Listen for theme changes to update charts dynamically
   useEffect(() => {
     const observer = new MutationObserver(() => {
-      initCharts();
+      if (!dashboardData.loading) {
+        initCharts();
+      }
     });
     observer.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],
     });
     return () => observer.disconnect();
-  }, []);
+  }, [dashboardData]);
 
   const detailedData = {
     "Upper Jasaan": {
@@ -262,22 +481,22 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           center: ["50%", "60%"],
           data: [
             {
-              value: 773,
+              value: dashboardData.genderData.maleFarmers,
               name: "Male Farmers",
               itemStyle: { color: "#10b981" },
             },
             {
-              value: 474,
+              value: dashboardData.genderData.femaleFarmers,
               name: "Female Farmers",
               itemStyle: { color: "#34d399" },
             },
             {
-              value: 223,
+              value: dashboardData.genderData.maleFisherfolks,
               name: "Male Fisherfolks",
               itemStyle: { color: "#3b82f6" },
             },
             {
-              value: 162,
+              value: dashboardData.genderData.femaleFisherfolks,
               name: "Female Fisherfolks",
               itemStyle: { color: "#06b6d4" },
             },
@@ -306,6 +525,12 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
     const productionChart = echarts.init(
       document.getElementById("productionChart")
     );
+    
+    // Prepare data from productionByArea
+    const areas = Object.keys(dashboardData.productionByArea);
+    const cropsData = areas.map(area => dashboardData.productionByArea[area].crops);
+    const animalsData = areas.map(area => dashboardData.productionByArea[area].animals);
+    
     const productionOption = {
       animation: true,
       tooltip: {
@@ -328,7 +553,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
       },
       xAxis: {
         type: "category",
-        data: ["Upper Jasaan", "Lower Jasaan"],
+        data: areas.length > 0 ? areas : ["No Data"],
         axisLabel: { color: textColor, fontSize: 12 },
       },
       yAxis: {
@@ -340,13 +565,13 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         {
           name: "Crops",
           type: "bar",
-          data: [320, 332],
+          data: cropsData.length > 0 ? cropsData : [0],
           itemStyle: { color: "#10b981" },
         },
         {
           name: "Animals",
           type: "bar",
-          data: [220, 182],
+          data: animalsData.length > 0 ? animalsData : [0],
           itemStyle: { color: "#f59e0b" },
         },
       ],
@@ -412,7 +637,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         {
           name: "Farmers",
           type: "line",
-          data: [45, 52, 38, 67, 71, 85, 92, 78, 65, 58, 49, 43],
+          data: dashboardData.monthlyData.farmers,
           smooth: true,
           itemStyle: { color: "#10b981" },
           lineStyle: { color: "#10b981", width: 3 },
@@ -420,7 +645,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         {
           name: "Fisherfolks",
           type: "line",
-          data: [12, 8, 15, 18, 22, 28, 25, 19, 16, 14, 11, 9],
+          data: dashboardData.monthlyData.fisherfolks,
           smooth: true,
           itemStyle: { color: "#3b82f6" },
           lineStyle: { color: "#3b82f6", width: 3 },
@@ -719,9 +944,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Farmers
                 </p>
-                <h3 className="text-2xl font-bold text-foreground mt-1">1,247</h3>
-                <p className="text-xs text-green-500 mt-1">
-                  +15% from last month
+                <h3 className="text-2xl font-bold text-foreground mt-1">
+                  {dashboardData.loading ? '...' : dashboardData.totalFarmers.toLocaleString()}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Active registrants
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-green-900/30 flex items-center justify-center">
@@ -738,9 +965,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Fisherfolks
                 </p>
-                <h3 className="text-2xl font-bold text-foreground mt-1">385</h3>
-                <p className="text-xs text-blue-500 mt-1">
-                  +8% from last month
+                <h3 className="text-2xl font-bold text-foreground mt-1">
+                  {dashboardData.loading ? '...' : dashboardData.totalFisherfolks.toLocaleString()}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Active registrants
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-blue-900/30 flex items-center justify-center">
@@ -755,9 +984,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Crops</p>
-                <h3 className="text-2xl font-bold text-foreground mt-1">2,847</h3>
-                <p className="text-xs text-orange-500 mt-1">
-                  +12% from last season
+                <h3 className="text-2xl font-bold text-foreground mt-1">
+                  {dashboardData.loading ? '...' : dashboardData.totalCrops.toLocaleString()}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Registered crops
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-orange-900/30 flex items-center justify-center">
@@ -774,9 +1005,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Animals
                 </p>
-                <h3 className="text-2xl font-bold text-foreground mt-1">8,459</h3>
-                <p className="text-xs text-yellow-500 mt-1">
-                  +7% from last month
+                <h3 className="text-2xl font-bold text-foreground mt-1">
+                  {dashboardData.loading ? '...' : dashboardData.totalAnimals.toLocaleString()}
+                </h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total head count
                 </p>
               </div>
               <div className="h-12 w-12 rounded-full bg-yellow-900/30 flex items-center justify-center">
@@ -815,9 +1048,20 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
       {/* Line Chart - Monthly Registration Trend */}
       <Card className="bg-card text-card-foreground border-0 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-foreground text-lg">
-            Monthly Registration Trend
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-foreground text-lg">
+              Monthly Registration Trend
+            </CardTitle>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              className="px-3 py-1 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          </div>
         </CardHeader>
         <CardContent>
           <div id="registrationChart" className="h-80 w-full"></div>
@@ -829,30 +1073,34 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         {/* Top 5 Puroks */}
         <Card className="bg-card text-card-foreground border-0 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-foreground text-lg">Top 5 Puroks</CardTitle>
+            <CardTitle className="text-foreground text-lg">Top 5 Puroks (Registrants)</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { name: "Purok 5 (Upper Jasaan)", count: 189, percent: 92 },
-                { name: "Purok 3 (Lower Jasaan)", count: 167, percent: 81 },
-                { name: "Purok 6 (Upper Jasaan)", count: 156, percent: 76 },
-                { name: "Purok 1 (Lower Jasaan)", count: 145, percent: 71 },
-                { name: "Purok 2 (Lower Jasaan)", count: 128, percent: 62 },
-              ].map((purok, index) => (
-                <div key={index} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-foreground">{purok.name}</span>
-                    <span className="text-muted-foreground">{purok.count}</span>
-                  </div>
-                  <div className="w-full bg-secondary rounded-full h-2">
-                    <div
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${purok.percent}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
+              {dashboardData.topPuroks.length > 0 ? (
+                dashboardData.topPuroks.map((purok, index) => {
+                  // Calculate percentage based on max count
+                  const maxCount = dashboardData.topPuroks[0]?.count || 1;
+                  const percent = Math.round((purok.count / maxCount) * 100);
+                  
+                  return (
+                    <div key={index} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-foreground">{purok.name}</span>
+                        <span className="text-muted-foreground">{purok.count}</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{ width: `${percent}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="text-muted-foreground text-sm">No purok data available</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -1250,63 +1498,70 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                       <th className="px-4 py-3 text-left text-muted-foreground">
                         {modalType === "crops" ? "Crop Type" : "Animal Type"}
                       </th>
-                      {Object.keys(
-                        detailedData[selectedArea][
-                          modalType === "crops" ? "crops" : "animals"
-                        ]
-                      )[0] &&
-                        Object.keys(
-                          detailedData[selectedArea][
-                            modalType === "crops" ? "crops" : "animals"
-                          ][
-                            Object.keys(
-                              detailedData[selectedArea][
-                                modalType === "crops" ? "crops" : "animals"
-                              ]
-                            )[0]
-                          ]
-                        )
-                          .filter((key) => key !== "total")
-                          .map((purok, idx) => (
-                            <th
-                              key={idx}
-                              className="px-4 py-3 text-left text-muted-foreground"
-                            >
-                              {purok}
-                            </th>
-                          ))}
+                      {(() => {
+                        const areaData = dashboardData.detailedProductionData[selectedArea];
+                        if (!areaData) return null;
+                        const data = modalType === "crops" ? areaData.crops : areaData.animals;
+                        
+                        // Collect ALL unique puroks across all crops/animals
+                        const allPuroks = new Set();
+                        Object.values(data).forEach(purokData => {
+                          Object.keys(purokData).forEach(purok => allPuroks.add(purok));
+                        });
+                        const purokList = Array.from(allPuroks).sort();
+                        
+                        return purokList.map((purok, idx) => (
+                          <th
+                            key={idx}
+                            className="px-4 py-3 text-left text-muted-foreground"
+                          >
+                            {purok}
+                          </th>
+                        ));
+                      })()}
                       <th className="px-4 py-3 text-left text-muted-foreground">
                         Total
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(
-                      detailedData[selectedArea][
-                        modalType === "crops" ? "crops" : "animals"
-                      ]
-                    ).map(([name, values], idx) => (
-                      <tr
-                        key={idx}
-                        className={`border-t border-border ${
-                          idx % 2 === 0 ? "bg-card" : "bg-muted/10"
-                        } hover:bg-muted/20 transition-colors`}
-                      >
-                        <td className="px-4 py-3 text-foreground font-medium">
-                          {name}
-                        </td>
-                        {Object.entries(values)
-                          .filter(([key]) => key !== "total")
-                          .map(([key, val]) => (
-                            <td key={key} className="px-4 py-3 text-muted-foreground">
-                              {val}
+                    {(() => {
+                      const areaData = dashboardData.detailedProductionData[selectedArea];
+                      if (!areaData) return null;
+                      const data = modalType === "crops" ? areaData.crops : areaData.animals;
+                      
+                      // Collect ALL unique puroks across all crops/animals (same as header)
+                      const allPuroks = new Set();
+                      Object.values(data).forEach(purokData => {
+                        Object.keys(purokData).forEach(purok => allPuroks.add(purok));
+                      });
+                      const purokList = Array.from(allPuroks).sort();
+                      
+                      return Object.entries(data).map(([name, values], idx) => {
+                        const total = Object.values(values).reduce((sum, val) => sum + val, 0);
+                        return (
+                          <tr
+                            key={idx}
+                            className={`border-t border-border ${
+                              idx % 2 === 0 ? "bg-card" : "bg-muted/10"
+                            } hover:bg-muted/20 transition-colors`}
+                          >
+                            <td className="px-4 py-3 text-foreground font-medium">
+                              {name}
                             </td>
-                          ))}
-                        <td className="px-4 py-3 text-foreground font-bold">
-                          {values.total}
-                        </td>
-                      </tr>
-                    ))}
+                            {/* Display value for each purok in the correct column */}
+                            {purokList.map((purok) => (
+                              <td key={purok} className="px-4 py-3 text-muted-foreground">
+                                {values[purok] || 0}
+                              </td>
+                            ))}
+                            <td className="px-4 py-3 text-foreground font-bold">
+                              {total}
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
                   </tbody>
                 </table>
               </div>
