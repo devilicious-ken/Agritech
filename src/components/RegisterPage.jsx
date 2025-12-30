@@ -88,9 +88,12 @@ const [formInputs, setFormInputs] = useState({
   place_of_birth: '',
   mother_full_name: '',
   spouse_name: '',
-  perm_municipality_city: '',
-  perm_province: '',
-  perm_region: '',
+  household_members_count: '',
+  household_males: '',
+  household_females: '',
+  perm_municipality_city: 'Jasaan',
+  perm_province: 'Misamis Oriental',
+  perm_region: 'Region 10 - Northern Mindanao',
   pres_municipality_city: '',
   pres_province: '',
   pres_region: '',
@@ -101,6 +104,12 @@ const [formInputs, setFormInputs] = useState({
   source_of_funds: '',
   income_farming: '',
   income_non_farming: '',
+  emergency_contact_name: '',
+  emergency_contact_phone: '',
+  government_id_type: '',
+  government_id_number: '',
+  coop_name: '',
+  indigenous_group_name: ''
 });
 
 const [fishingCheckboxes, setFishingCheckboxes] = useState({
@@ -141,7 +150,15 @@ React.useEffect(() => {
       const parsed = JSON.parse(savedFormData);
       
       // Restore all form states
-      if (parsed.formInputs) setFormInputs(parsed.formInputs);
+      if (parsed.formInputs) {
+        // Preserve default values if saved values are empty
+        setFormInputs({
+          ...parsed.formInputs,
+          perm_municipality_city: parsed.formInputs.perm_municipality_city || 'Jasaan',
+          perm_province: parsed.formInputs.perm_province || 'Misamis Oriental',
+          perm_region: parsed.formInputs.perm_region || 'Region 10 - Northern Mindanao'
+        });
+      }
       if (parsed.registryType) setRegistryType(parsed.registryType);
       if (parsed.civilStatus) setCivilStatus(parsed.civilStatus);
       if (parsed.religion) setReligion(parsed.religion);
@@ -450,11 +467,6 @@ const handleSubmit = async () => {
     };
     const registrant = await ApiService.createRegistrant(registrantData);
     
-    // Initialize arrays to collect crops/livestock/poultry from parcel info
-    const cropsFromParcels = [];
-    const livestockFromParcels = [];
-    const poultryFromParcels = [];
-
     // 2. CREATE ADDRESSES
     const addresses = [
       {
@@ -492,58 +504,82 @@ const handleSubmit = async () => {
     };
     await ApiService.createFinancialInfo(financialData);
 
-    // 4. CREATE FARM PARCELS & PARCEL INFOS
-    // Also extract crops/livestock/poultry from parcelInfo (even without farm parcels)
-    
-    // First, process parcelInfo to extract crops/livestock/poultry for the registrant
-    parcelInfo.forEach(info => {
-      if (!info.crop_commodity) return;
-      
-      if (info.crop_commodity === 'Crops' && info.crop_name) {
-        cropsFromParcels.push({
-          registrant_id: registrant.id,
-          name: info.crop_name,
-          value_text: info.size ? `${info.size} ha` : null,
-          corn_type: null
-        });
-      } else if (info.crop_commodity === 'Livestock' && info.animal_name) {
-        livestockFromParcels.push({
-          registrant_id: registrant.id,
-          animal: info.animal_name,
-          head_count: info.head_count ? parseInt(info.head_count) : null
-        });
-      } else if (info.crop_commodity === 'Poultry' && info.animal_name) {
-        poultryFromParcels.push({
-          registrant_id: registrant.id,
-          bird: info.animal_name,
-          head_count: info.head_count ? parseInt(info.head_count) : null
-        });
-      }
-    });
-    
-    // Then, if farm parcels exist, save them and their parcel_infos
-    // Calculate total farm area from parcelInfo sizes
-    const totalFarmArea = parcelInfo
-      .filter(info => info.crop_commodity === 'Crops' && info.size)
-      .reduce((sum, info) => sum + parseFloat(info.size || 0), 0);
+    // 4. CREATE FARM PARCELS & PARCEL INFOS (with proper linking)
+    // Initialize arrays to collect crops/livestock/poultry from parcel info
+    const cropsFromParcels = [];
+    const livestockFromParcels = [];
+    const poultryFromParcels = [];
 
+    // Loop through farm parcels
     for (const parcel of farmParcels) {
       if (parcel.farm_location) {
+        // Get parcel infos associated with THIS specific parcel (by parcel_id)
+        const parcelInfosForThisParcel = parcelInfo.filter(info => 
+          info.parcel_id === parcel.id
+        );
+        
+        // Calculate total farm area for THIS parcel only (not all parcels combined)
+        const totalFarmAreaForThisParcel = parcelInfosForThisParcel
+          .filter(info => info.crop_commodity === 'Crops' && info.size)
+          .reduce((sum, info) => sum + parseFloat(info.size || 0), 0);
+        
+        // Create farm parcel with its own total area
         const parcelData = {
           registrant_id: registrant.id,
           farmers_in_rotation: parcel.farmer_rotation || null,
           farm_location: parcel.farm_location || null,
-          total_farm_area_ha: totalFarmArea > 0 ? totalFarmArea : null,
+          total_farm_area_ha: totalFarmAreaForThisParcel > 0 ? totalFarmAreaForThisParcel : null,
           ownership_document: parcel.ownership_doc || null,
           ownership_document_no: parcel.ownership_doc_no || null,
           ownership: parcel.ownership_type || null,
           within_ancestral_domain: parcel.ancestral_domain === 'yes',
-          agrarian_reform_beneficiary: parcel.agrarian_reform === 'yes'
+          agrarian_reform_beneficiary: parcel.agrarian_reform === 'yes',
+          latitude: null,  // Will be set by SetFarmLocationPage
+          longitude: null, // Will be set by SetFarmLocationPage
+          image_url: null  // Will be set by SetFarmLocationPage
         };
         const savedParcel = await ApiService.createFarmParcel(parcelData);
         
-        // Note: Commodity data (Crops/Livestock/Poultry) is saved directly to 
-        // their respective tables, not to parcel_infos
+        // Process each parcel info for this farm parcel
+        for (const info of parcelInfosForThisParcel) {
+          if (!info.crop_commodity) continue;
+          
+          // Create parcel_info record FIRST to get the ID
+          const parcelInfoData = {
+            parcel_id: savedParcel.id,
+            farm_kind: info.farm_type || null,
+            is_organic_practitioner: info.organic === 'yes',
+            remarks: info.remarks || null
+          };
+          
+          const savedParcelInfos = await ApiService.createParcelInfos([parcelInfoData]);
+          const parcelInfoId = savedParcelInfos[0].id;
+          
+          // Now create commodity records WITH parcel_info_id linking
+          if (info.crop_commodity === 'Crops' && info.crop_name) {
+            cropsFromParcels.push({
+              registrant_id: registrant.id,
+              parcel_info_id: parcelInfoId,  // ✅ Links to parcel_info
+              name: info.crop_name,
+              value_text: info.size ? `${info.size} ha` : null,
+              corn_type: info.crop_name === 'Corn' ? (info.corn_type || null) : null
+            });
+          } else if (info.crop_commodity === 'Livestock' && info.animal_name) {
+            livestockFromParcels.push({
+              registrant_id: registrant.id,
+              parcel_info_id: parcelInfoId,  // ✅ Links to parcel_info
+              animal: info.animal_name,
+              head_count: info.head_count ? parseInt(info.head_count) : null
+            });
+          } else if (info.crop_commodity === 'Poultry' && info.animal_name) {
+            poultryFromParcels.push({
+              registrant_id: registrant.id,
+              parcel_info_id: parcelInfoId,  // ✅ Links to parcel_info
+              bird: info.animal_name,
+              head_count: info.head_count ? parseInt(info.head_count) : null
+            });
+          }
+        }
       }
     }
 
@@ -1502,11 +1538,9 @@ const renderAddressTab = () => (
           <label className="text-sm font-medium text-gray-400 mb-1 block">Municipality/City</label>
           <Input 
             name="perm_municipality_city"
-            value={formInputs.perm_municipality_city || 'Jasaan'}
+            value={formInputs.perm_municipality_city}
             onChange={handleInputChange}
             className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            defaultValue="Jasaan"
-            readOnly
           />
         </div>
 
@@ -1514,11 +1548,9 @@ const renderAddressTab = () => (
           <label className="text-sm font-medium text-gray-400 mb-1 block">Province</label>
           <Input 
             name="perm_province"
-            value={formInputs.perm_province || 'Misamis Oriental'}
+            value={formInputs.perm_province}
             onChange={handleInputChange}
             className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
-            defaultValue="Misamis Oriental"
-            readOnly
           />
         </div>
 
@@ -1526,7 +1558,7 @@ const renderAddressTab = () => (
           <label className="text-sm font-medium text-gray-400 mb-1 block">Region</label>
           <select 
             name="perm_region"
-            value={formInputs.perm_region || 'Region 10 - Northern Mindanao'}
+            value={formInputs.perm_region}
             onChange={handleInputChange}
             className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
           >
