@@ -342,6 +342,16 @@ async getActivityLogs(limit = 50) {
   return data;
 },
 
+async getLogArchives() {
+  const { data, error } = await supabase
+    .from('log_archives')
+    .select('*')
+    .order('archive_date', { ascending: false });
+
+  if (error) throw error;
+  return data;
+},
+
 // ===== SOFT DELETE & RESTORE =====
 
 async softDeleteRegistrant(id, deletedBy, deleteReason) {
@@ -424,7 +434,14 @@ async getAllRegistrants() {
   try {
     const { data, error } = await supabase
       .from('registrants')
-      .select('*, addresses(*)');
+      .select(`
+        *,
+        addresses(*),
+        farm_parcels(
+          *,
+          parcel_infos(*)
+        )
+      `);
     
     if (error) throw error;
     return data || [];
@@ -472,6 +489,20 @@ async getAllPoultry() {
     return data || [];
   } catch (error) {
     console.error('Error fetching all poultry:', error);
+    throw error;
+  }
+},
+
+async getAllParcelInfos() {
+  try {
+    const { data, error } = await supabase
+      .from('parcel_infos')
+      .select('*');
+    
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error fetching all parcel infos:', error);
     throw error;
   }
 },
