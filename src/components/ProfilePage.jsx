@@ -4,13 +4,12 @@ import { supabase } from '../services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Assuming Label exists or use standard label
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Moon, Sun, Camera, Save, Lock, User, Palette, Eye, EyeOff } from "lucide-react";
+import { Moon, Sun, Save, Lock, User, Palette, Eye, EyeOff, Upload, X } from "lucide-react";
 
 const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
-    // Profile Page Component
     const { theme, setTheme } = useContext(ThemeContext);
     const [user, setUser] = useState(initialUser || {});
     const [loading, setLoading] = useState(false);
@@ -30,6 +29,7 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showImageModal, setShowImageModal] = useState(false);
 
     // Feedback
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -40,11 +40,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
             setFirstName(initialUser.first_name || '');
             setLastName(initialUser.last_name || '');
             setEmail(initialUser.email || '');
-            setAvatarUrl(initialUser.avatar_url || ''); // Assuming avatar_url is passed or in local storage
+            setAvatarUrl(initialUser.avatar_url || '');
         }
     }, [initialUser]);
 
-    // Helper to show messages (You might want to replace this with the App's toast system if available via props)
     const showMessage = (type, text) => {
         setMessage({ type, text });
         setTimeout(() => setMessage({ type: '', text: '' }), 3000);
@@ -61,10 +60,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
         // Validation
         const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
         if (!allowedTypes.includes(file.type)) {
-            showMessage('error', 'Invalid file type use JPEG or PNG.');
+            showMessage('error', 'Invalid file type. Use JPEG or PNG.');
             return;
         }
-        if (file.size > 2 * 1024 * 1024) { // 2MB
+        if (file.size > 2 * 1024 * 1024) {
             showMessage('error', 'File size exceeds 2MB.');
             return;
         }
@@ -79,8 +78,8 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                 // Optimistic update locally
                 const updatedUser = { ...user, avatar_url: base64Data };
                 setUser(updatedUser);
-                if (setAppUser) setAppUser(updatedUser); // Update App state
-                localStorage.setItem('user', JSON.stringify(updatedUser)); // Update consistency
+                if (setAppUser) setAppUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
 
                 // Save to DB
                 const { error } = await supabase
@@ -111,7 +110,7 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
             const updates = {
                 first_name: firstName,
                 last_name: lastName,
-                email: email, // If allowing email change
+                email: email,
             };
 
             const { error } = await supabase
@@ -121,10 +120,9 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
 
             if (error) throw error;
 
-            // Update local state
             const updatedUser = { ...user, ...updates };
             setUser(updatedUser);
-            if (setAppUser) setAppUser(updatedUser); // Update App state
+            if (setAppUser) setAppUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
             showMessage('success', 'Profile updated successfully!');
 
@@ -148,13 +146,6 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                 return;
             }
 
-            // Verify current password (if implementing explicitly, usually handled by Supabase Auth but here custom table)
-            // Since it's a custom table, we ideally check the current password first. 
-            // For now, we'll assume direct update if authorized, but typically you'd verify old password.
-            // Skipping verification for simplicity unless requested, to fit implementation blocks.
-            // Update: User requested "Change Current Password", implying verification.
-
-            // 1. Check current password
             const { data: userData, error: fetchError } = await supabase
                 .from('users')
                 .select('password')
@@ -168,7 +159,6 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                 return;
             }
 
-            // 2. Update password
             const { error: updateError } = await supabase
                 .from('users')
                 .update({ password: newPassword })
@@ -233,33 +223,84 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                             <Card>
                                 <CardHeader>
                                     <CardTitle>Profile Picture</CardTitle>
-                                    <CardDescription>Click on the avatar to upload a new photo.</CardDescription>
+                                    <CardDescription>Click the image to view full size, or the upload button to change.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="flex flex-col items-center">
-                                    <div className="relative group cursor-pointer" onClick={handleAvatarClick}>
-                                        <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
-                                            <AvatarImage src={avatarUrl} className="object-cover" />
-                                            <AvatarFallback className="text-4xl bg-primary/10 text-primary">{getUserInitials()}</AvatarFallback>
-                                        </Avatar>
-                                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <Camera className="text-white w-8 h-8" />
+                                    <div className="relative group">
+                                        {/* Avatar Display */}
+                                        <div
+                                            className="cursor-pointer transition-transform active:scale-95"
+                                            onClick={() => setShowImageModal(true)}
+                                            title="View Full Image"
+                                        >
+                                            <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
+                                                <AvatarImage src={avatarUrl} className="object-cover" />
+                                                <AvatarFallback className="text-4xl bg-primary/10 text-primary">
+                                                    {getUserInitials()}
+                                                </AvatarFallback>
+                                            </Avatar>
                                         </div>
+
+                                        {/* Upload Button */}
+                                        <button
+                                            onClick={handleAvatarClick}
+                                            className="
+        absolute bottom-0 right-0
+        bg-[var(--card)]
+        text-[var(--card-foreground)]
+        p-3 rounded-full
+        shadow-lg
+        hover:bg-[var(--muted)]
+        transition-all
+        border-4 border-background
+    "
+                                        >
+                                            <Upload className="w-5 h-5" />
+                                        </button>
+
+
+                                        {/* Upload Loading Indicator */}
                                         {avatarUploading && (
-                                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center">
-                                                <i className="fas fa-spinner fa-spin text-white"></i>
+                                            <div className="absolute inset-0 bg-black/60 rounded-full flex items-center justify-center pointer-events-none">
+                                                <i className="fas fa-spinner fa-spin text-white text-2xl"></i>
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Hidden File Input */}
                                     <input
                                         type="file"
                                         ref={fileInputRef}
                                         className="hidden"
-                                        accept="image/png, image/jpeg"
+                                        accept="image/png, image/jpeg, image/jpg"
                                         onChange={handleFileChange}
                                     />
-                                    <p className="text-xs text-muted-foreground mt-4">Allowed *.jpeg, *.jpg, *.png, max 2MB</p>
+                                    <p className="text-xs text-muted-foreground mt-6">Allowed: JPEG, PNG • Max size: 2MB</p>
                                 </CardContent>
                             </Card>
+
+                            {/* Image Zoom Modal */}
+                            {showImageModal && (
+                                <div
+                                    className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+                                    onClick={() => setShowImageModal(false)}
+                                >
+                                    <div className="relative max-w-4xl w-full h-full flex items-center justify-center">
+                                        <button
+                                            onClick={() => setShowImageModal(false)}
+                                            className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors bg-black/50 rounded-full p-2"
+                                        >
+                                            <X className="w-6 h-6" />
+                                        </button>
+                                        <img
+                                            src={avatarUrl || '/placeholder-avatar.png'}
+                                            alt="Profile"
+                                            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Personal Info Card */}
                             <Card>
@@ -270,17 +311,33 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                                 <CardContent className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">First Name</label>
-                                            <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="First Name" />
+                                            <Label htmlFor="firstName">First Name</Label>
+                                            <Input
+                                                id="firstName"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                placeholder="First Name"
+                                            />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-sm font-medium">Last Name</label>
-                                            <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Last Name" />
+                                            <Label htmlFor="lastName">Last Name</Label>
+                                            <Input
+                                                id="lastName"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                placeholder="Last Name"
+                                            />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-sm font-medium">Email Address</label>
-                                        <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+                                        <Label htmlFor="email">Email Address</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="Email"
+                                        />
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-end border-t pt-6">
@@ -303,9 +360,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Current Password</label>
+                                    <Label htmlFor="currentPassword">Current Password</Label>
                                     <div className="relative">
                                         <Input
+                                            id="currentPassword"
                                             type={showCurrentPassword ? "text" : "password"}
                                             value={currentPassword}
                                             onChange={(e) => setCurrentPassword(e.target.value)}
@@ -322,9 +380,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">New Password</label>
+                                    <Label htmlFor="newPassword">New Password</Label>
                                     <div className="relative">
                                         <Input
+                                            id="newPassword"
                                             type={showNewPassword ? "text" : "password"}
                                             value={newPassword}
                                             onChange={(e) => setNewPassword(e.target.value)}
@@ -341,9 +400,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                                     </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium">Confirm New Password</label>
+                                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
                                     <div className="relative">
                                         <Input
+                                            id="confirmPassword"
                                             type={showConfirmPassword ? "text" : "password"}
                                             value={confirmPassword}
                                             onChange={(e) => setConfirmPassword(e.target.value)}
