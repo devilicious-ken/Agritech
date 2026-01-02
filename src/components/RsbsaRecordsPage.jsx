@@ -15,7 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ApiService, { supabase } from "../services/api";
 import { ThemeContext } from "../App";
-import EditableViewModal from "./EditableViewModal"; // ✅ NEW: Editable View Modal component
+import EditableViewModal from "./EditableViewModal";
+import ViewRecordModal from "./ViewRecordModal"; // ✅ NEW: Read-Only View Modal
 
 // ✅ Modal Component - Moved outside to prevent re-creation on every render
 const Modal = React.memo(({ show, onClose, title, children, size = "md" }) => {
@@ -105,7 +106,8 @@ const RsbsaRecordsPage = () => {
   const [selectedRecords, setSelectedRecords] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteReason, setDeleteReason] = useState("");
-  const [showViewModal, setShowViewModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false); // Controls EDIT modal
+  const [showReadOnlyModal, setShowReadOnlyModal] = useState(false); // Controls READ-ONLY modal
   const [viewingRecord, setViewingRecord] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -352,11 +354,16 @@ const RsbsaRecordsPage = () => {
     }
   };
 
-  const handleViewRecord = (record) => {
+  const handleEditRecord = (record) => {
     setViewingRecord(record);
     setEditedData({}); // Initialize empty - changes will be tracked here
     setHasChanges(false); // No changes initially
     setShowViewModal(true);
+  };
+
+  const handleViewReadOnly = (record) => {
+    setViewingRecord(record);
+    setShowReadOnlyModal(true);
   };
 
 
@@ -831,10 +838,20 @@ const RsbsaRecordsPage = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handleViewRecord(record)}
-                          className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+                          onClick={() => handleViewReadOnly(record)}
+                          className="text-blue-500 hover:text-blue-600 hover:bg-blue-500/10 mr-1"
+                          title="View Details"
                         >
                           <i className="fas fa-eye mr-1"></i> View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditRecord(record)}
+                          className="text-green-500 hover:text-green-600 hover:bg-green-500/10"
+                          title="Edit Record"
+                        >
+                          <i className="fas fa-edit mr-1"></i> Edit
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -971,6 +988,18 @@ const RsbsaRecordsPage = () => {
         getStatusBadgeColor={getStatusBadgeColor}
         getTypeBadgeColor={getTypeBadgeColor}
         formatDate={formatDate}
+      />
+
+      {/* ✅ NEW: Read-Only View Modal */}
+      <ViewRecordModal
+        show={showReadOnlyModal}
+        record={viewingRecord}
+        onClose={() => {
+          setShowReadOnlyModal(false);
+          setViewingRecord(null);
+        }}
+        getStatusBadgeColor={getStatusBadgeColor}
+        getTypeBadgeColor={getTypeBadgeColor}
       />
 
       {/* Success Modal */}

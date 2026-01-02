@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { createPortal } from 'react-dom';
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ThemeContext } from "../App";
 
@@ -165,9 +165,11 @@ const Sidebar = ({ currentPage, setCurrentPage, handleLogout, isOpen, onClose, o
       <div
         className={`mt-auto p-4 border-t border-border transition-colors duration-200 group cursor-pointer ${getUserSectionHoverClass()}`}
         title="User Profile"
+        onClick={() => setCurrentPage('profile')}
       >
         <div className={`flex ${isCollapsed ? 'flex-col items-center space-y-3' : 'items-center'}`}>
           <Avatar className="h-8 w-8 ring-2 ring-transparent group-hover:ring-primary/50 transition-colors">
+            <AvatarImage src={user?.avatar_url} className="object-cover" />
             <AvatarFallback className={`${getAvatarColor()} text-white text-xs font-semibold`}>
               {getUserInitials()}
             </AvatarFallback>

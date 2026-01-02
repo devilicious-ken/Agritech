@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -112,6 +112,7 @@ const TopNavigation = ({
           <DropdownMenuTrigger asChild>
             <button className="cursor-pointer">
               <Avatar className="h-9 w-9">
+                <AvatarImage src={user?.avatar_url} className="object-cover" />
                 <AvatarFallback
                   className="bg-primary/10 text-primary font-semibold"
                 >

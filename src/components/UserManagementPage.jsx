@@ -2,14 +2,14 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from '@/services/api';
 import { ThemeContext } from "../App";
 
 const Modal = React.memo(({ show, onClose, title, children, theme }) => {
   if (!show) return null;
-  
+
   const modalClass = theme === 'dark'
     ? 'bg-[#1e1e1e] border border-[#333333] shadow-2xl'
     : 'bg-card border-0 shadow-2xl';
@@ -18,9 +18,9 @@ const Modal = React.memo(({ show, onClose, title, children, theme }) => {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999]" role="dialog" aria-modal="true">
-      <div 
-        className={`${modalClass} rounded-xl p-6 w-full max-w-md transform transition-all scale-100`} 
-        onClick={(e) => e.stopPropagation()} 
+      <div
+        className={`${modalClass} rounded-xl p-6 w-full max-w-md transform transition-all scale-100`}
+        onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
@@ -108,7 +108,7 @@ const UserManagementPage = () => {
       setError('');
       const { data, error } = await supabase
         .from('users')
-        .select('id, first_name, last_name, email, password, role, is_active, created_at, last_login')
+        .select('id, first_name, last_name, email, password, role, is_active, created_at, last_login, avatar_url')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -124,13 +124,16 @@ const UserManagementPage = () => {
         roleValue: user.role,
         status: user.is_active ? 'Active' : 'Inactive',
         avatar: `${user.first_name?.charAt(0) || ''}${user.last_name?.charAt(0) || ''}`.toUpperCase() || (user.email?.charAt(0) || 'U').toUpperCase(),
+        avatarUrl: user.avatar_url,
         createdAt: user.created_at,
         lastLogin: user.last_login
       }));
 
+      console.log('Fetched Users Raw Data:', data);
+      console.log('first user avatar_url:', data?.[0]?.avatar_url);
       setUsers(transformedUsers);
     } catch (error) {
-      console.error('Error fetching users from Supabase:', error);
+      console.error('Error fetching users from Supabase:', JSON.stringify(error, null, 2));
       setError('Failed to load users from Supabase.');
       setUsers([]);
     } finally {
@@ -143,8 +146,8 @@ const UserManagementPage = () => {
   }, []);
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
     return matchesSearch && matchesRole && matchesStatus;
@@ -281,13 +284,13 @@ const UserManagementPage = () => {
   const isDark = theme === 'dark';
 
   // Container/Card Styles - Slight border added (#333333)
-  const cardClass = isDark 
-    ? 'bg-[#1e1e1e] border border-[#333333] shadow-md' 
+  const cardClass = isDark
+    ? 'bg-[#1e1e1e] border border-[#333333] shadow-md'
     : 'bg-card text-card-foreground border-0 shadow-lg hover:shadow-xl transition-shadow duration-300';
-  
+
   const textClass = isDark ? 'text-white' : 'text-foreground';
   const subTextClass = isDark ? 'text-gray-400' : 'text-muted-foreground';
-  
+
   // Input/Select Styles - Slight border added
   const inputClass = isDark
     ? 'bg-[#252525] border border-[#333333] text-gray-200 focus:ring-green-600'
@@ -322,14 +325,14 @@ const UserManagementPage = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Button 
+            <Button
               onClick={fetchUsers}
               className="bg-primary hover:bg-primary/90 text-primary-foreground !rounded-button shadow-sm border-0"
               disabled={loading}
             >
               <i className="fas fa-sync-alt mr-2"></i> Refresh
             </Button>
-            <Button 
+            <Button
               onClick={() => setShowAddModal(true)}
               className="bg-green-600 hover:bg-green-700 text-white !rounded-button whitespace-nowrap shadow-sm border-0"
             >
@@ -337,7 +340,7 @@ const UserManagementPage = () => {
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent className="space-y-4 pt-6">
           {/* Search and Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
@@ -353,7 +356,7 @@ const UserManagementPage = () => {
                 />
               </div>
             </div>
-            
+
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
@@ -364,7 +367,7 @@ const UserManagementPage = () => {
               <option value="MAO Staff">MAO Staff</option>
               <option value="Agritech">Agritech</option>
             </select>
-            
+
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -440,6 +443,7 @@ const UserManagementPage = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9 ring-1 ring-border/50">
+                          <AvatarImage src={user.avatarUrl} alt={user.name} className="object-cover" />
                           <AvatarFallback className={`text-white text-xs font-bold ${getAvatarColor(user.role)}`}>
                             {user.avatar}
                           </AvatarFallback>
@@ -457,16 +461,16 @@ const UserManagementPage = () => {
                     <TableCell className={subTextClass}>{user.email}</TableCell>
                     <TableCell className={`${subTextClass} font-mono text-sm`}>{user.password}</TableCell>
                     <TableCell>
-                      <Badge className={user.role === 'Admin' ? 
-                        'bg-red-500/10 text-red-600 border border-red-500/20' : 
+                      <Badge className={user.role === 'Admin' ?
+                        'bg-red-500/10 text-red-600 border border-red-500/20' :
                         'bg-green-500/10 text-green-600 border border-green-500/20'
                       }>
                         {user.role}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge className={user.status === 'Active' ? 
-                        'bg-green-500/10 text-green-600 border border-green-500/20' : 
+                      <Badge className={user.status === 'Active' ?
+                        'bg-green-500/10 text-green-600 border border-green-500/20' :
                         'bg-gray-500/10 text-gray-500 border border-gray-500/20'
                       }>
                         {user.status}
@@ -514,7 +518,7 @@ const UserManagementPage = () => {
               >
                 <i className="fas fa-chevron-left text-xs"></i>
               </Button>
-              
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <Button
@@ -522,17 +526,16 @@ const UserManagementPage = () => {
                     onClick={() => setCurrentPage(page)}
                     variant={page === currentPage ? "default" : "ghost"}
                     size="sm"
-                    className={`h-8 w-8 p-0 !rounded-button ${
-                      page === currentPage ? 
+                    className={`h-8 w-8 p-0 !rounded-button ${page === currentPage ?
                       "bg-primary text-primary-foreground shadow-sm" :
                       `${subTextClass} hover:bg-muted hover:${textClass} border border-transparent`
-                    }`}
+                      }`}
                   >
                     {page}
                   </Button>
                 ))}
               </div>
-              
+
               <Button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
@@ -556,7 +559,7 @@ const UserManagementPage = () => {
               <input
                 type="text"
                 value={newUser.firstName}
-                onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
+                onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
                 autoFocus
                 className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
               />
@@ -567,7 +570,7 @@ const UserManagementPage = () => {
               <input
                 type="text"
                 value={newUser.lastName}
-                onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
+                onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
                 className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
               />
               {formErrors.lastName && <p className="text-destructive text-xs mt-1">{formErrors.lastName}</p>}
@@ -580,7 +583,7 @@ const UserManagementPage = () => {
               value={newUser.email}
               onChange={(e) => {
                 const value = e.target.value;
-                setNewUser({...newUser, email: value});
+                setNewUser({ ...newUser, email: value });
                 setFormErrors({ ...formErrors, email: validateEmail(value) });
               }}
               className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
@@ -595,7 +598,7 @@ const UserManagementPage = () => {
                 value={newUser.password}
                 onChange={(e) => {
                   const value = e.target.value;
-                  setNewUser({...newUser, password: value});
+                  setNewUser({ ...newUser, password: value });
                   setFormErrors({ ...formErrors, password: validatePassword(value) });
                 }}
                 className={`w-full pr-10 px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
@@ -614,7 +617,7 @@ const UserManagementPage = () => {
             <label className={`block ${subTextClass} text-sm font-medium mb-2`}>Role</label>
             <select
               value={newUser.role}
-              onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+              onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
               className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer ${inputClass}`}
             >
               <option value="user">MAO Staff</option>
@@ -651,7 +654,7 @@ const UserManagementPage = () => {
                 <input
                   type="text"
                   value={editingUser.firstName}
-                  onChange={(e) => setEditingUser({...editingUser, firstName: e.target.value})}
+                  onChange={(e) => setEditingUser({ ...editingUser, firstName: e.target.value })}
                   className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
                 />
               </div>
@@ -660,7 +663,7 @@ const UserManagementPage = () => {
                 <input
                   type="text"
                   value={editingUser.lastName}
-                  onChange={(e) => setEditingUser({...editingUser, lastName: e.target.value})}
+                  onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
                   className={`w-full px-3 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary transition-all ${inputClass}`}
                 />
               </div>
@@ -708,7 +711,7 @@ const UserManagementPage = () => {
               <select
                 value={editingUser.roleValue || (editingUser.role === 'Admin' ? 'admin' : editingUser.role === 'Agritech' ? 'agritech' : 'user')}
                 onChange={(e) => setEditingUser({
-                  ...editingUser, 
+                  ...editingUser,
                   roleValue: e.target.value,
                   role: e.target.value === 'admin' ? 'Admin' : e.target.value === 'agritech' ? 'Agritech' : 'MAO Staff'
                 })}

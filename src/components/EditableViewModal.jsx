@@ -145,7 +145,7 @@ const EditableViewModal = ({
                 parcel_infos: parcel.parcel_infos?.map(info => {
                     let flattened = { ...info };
                     // Map DB fields to UI fields
-                    flattened.size = info.size_ha;
+                    flattened.size = info.size || info.size_ha;
                     flattened.organic = info.is_organic_practitioner ? 'yes' : 'no';
                     flattened.farm_type = info.farm_kind;
 
@@ -179,6 +179,8 @@ const EditableViewModal = ({
             const rootLivestock = Array.isArray(data.livestock) ? data.livestock : [];
             const rootPoultry = Array.isArray(data.poultry) ? data.poultry : [];
 
+            // Group legacy data (crops that are NOT linked to a parcel_info) into the first parcel or a default one
+            // Ideally, we should check if they are already in valid parcel_infos. But here we are dealing with root fallback.
             const productionInfos = [];
 
             rootCrops.forEach(c => {
@@ -216,14 +218,10 @@ const EditableViewModal = ({
             });
 
             if (productionInfos.length > 0) {
-                if (data.farm_parcels && data.farm_parcels.length > 0) {
-                    // Inject into first parcel
-                    if (!data.farm_parcels[0].parcel_infos) {
-                        data.farm_parcels[0].parcel_infos = [];
-                    }
-                    data.farm_parcels[0].parcel_infos = [...data.farm_parcels[0].parcel_infos, ...productionInfos];
-                } else {
-                    // Create virtual parcel
+                // strict fallback: Only create a virtual parcel if NO parcels exist
+                // If parcels exist but have no info, we DO NOT inject root data into them
+                // because that causes the "all data in parcel 1" issue.
+                if (!data.farm_parcels || data.farm_parcels.length === 0) {
                     data.farm_parcels = [{
                         id: 'virtual-production',
                         farm_location: 'Unassigned Production Data',
@@ -233,6 +231,8 @@ const EditableViewModal = ({
                         parcel_infos: productionInfos
                     }];
                 }
+                // If parcels exist, we assume the user intended to manage them via the parcel UI
+                // and we should NOT dump root data into Parcel 1.
             }
         }
 
@@ -296,11 +296,45 @@ const EditableViewModal = ({
         setHasChanges(true);
     };
 
-    // Cancel changes
     const handleCancelChanges = () => {
         setEditedData({});
         setHasChanges(false);
     };
+
+    // Auto-calculate Total Farm Area if user edits crop sizes
+    useEffect(() => {
+        // We only recalc if we are in "Farmer" mode and have farm parcels
+        if (record?.type !== "Farmer") return;
+
+        const currentParcels = (editedData['farm_parcels'] !== undefined)
+            ? editedData['farm_parcels']
+            : (normalizedData.farm_parcels || []);
+
+        // Check if any parcel needs an area update based on recent crop size changes
+        // This is a simplified "Re-calc all" strategy for safety
+        const updatedParcels = currentParcels.map(parcel => {
+            // Calculate partial sum from infos
+            const infos = parcel.parcel_infos || [];
+            const calculatedArea = infos.reduce((sum, info) => {
+                if (info.crop_commodity === 'Crops') {
+                    return sum + (parseFloat(info.size) || 0);
+                }
+                return sum;
+            }, 0);
+
+            // Update the total_farm_area_ha if it differs significantly
+            // We only update if the calculated area > 0 to avoid wiping manual entries if logic fails
+            // But user requested: "Value should be based on Sum of all Size (ha)... not total of all"
+            // So we enforce strict sum.
+            return { ...parcel, total_farm_area_ha: calculatedArea > 0 ? calculatedArea.toFixed(2) : parcel.total_farm_area_ha };
+        });
+
+        // Only update state if something actually changed to avoid infinite loops
+        // JSON.stringify compare is potentially expensive but safe for this depth
+        if (JSON.stringify(updatedParcels) !== JSON.stringify(currentParcels)) {
+            setEditedData(prev => ({ ...prev, farm_parcels: updatedParcels }));
+        }
+    }, [editedData, record, normalizedData]);
 
     // Save changes
     const handleSaveChanges = async () => {
@@ -315,6 +349,9 @@ const EditableViewModal = ({
             setIsSaving(false);
         }
     };
+
+
+    const sourceFundsOptions = ['Personal Savings', 'Family Support', 'Agricultural Income', 'Remittance', 'Loan', 'Government Assistance', 'Pension', 'Business Income'];
 
     if (!show || !record) return null;
 
@@ -718,7 +755,7 @@ const EditableViewModal = ({
                         </div>
 
                         {/* CONDITIONAL: Show when NOT household head */}
-                        {getValue('is_household_head', true) === false && (
+                        {!getValue('is_household_head', true) && (
                             <>
                                 <div className="col-span-2">
                                     <label className={`text-sm ${subTextClass}`}>Household Head Name</label>
@@ -740,14 +777,15 @@ const EditableViewModal = ({
                                     />
                                 </div>
 
+                                {/* READ-ONLY: Total/Male/Female Members Count */}
                                 <div>
                                     <label className={`text-sm ${subTextClass}`}>Total Members</label>
                                     <Input
                                         type="number"
-                                        value={getValue('household_members_count')}
-                                        onChange={(e) => handleFieldChange('household_members_count', e.target.value)}
-                                        className={inputClass}
-                                        placeholder="0"
+                                        value={parseInt(getValue('household_males') || 0) + parseInt(getValue('household_females') || 0)}
+                                        readOnly
+                                        className={`${inputClass} opacity-70 cursor-not-allowed`}
+                                        title="Auto-calculated from Males + Females"
                                     />
                                 </div>
 
@@ -774,6 +812,8 @@ const EditableViewModal = ({
                                 </div>
                             </>
                         )}
+
+
                     </div>
                 </div>
 
@@ -958,15 +998,22 @@ const EditableViewModal = ({
                             />
                         </div>
 
-                        {/* EDITABLE: Source of Funds */}
+                        {/* EDITABLE: Source of Funds (Dropdown) */}
                         <div>
                             <label className={`text-sm ${subTextClass}`}>Source of Funds</label>
-                            <Input
+                            <select
                                 value={getValue('source_of_funds', normalizedData.financial_infos?.source_of_funds || "")}
                                 onChange={(e) => handleFieldChange('source_of_funds', e.target.value)}
-                                className={inputClass}
-                                placeholder="Source of Funds"
-                            />
+                                className={`w-full h-10 px-3 py-2 rounded-md ${inputClass}`}
+                            >
+                                <option value="">Select</option>
+                                {sourceFundsOptions.map(opt => (
+                                    <option key={opt} value={opt}>{opt}</option>
+                                ))}
+                                {getValue('source_of_funds') && !sourceFundsOptions.includes(getValue('source_of_funds')) && (
+                                    <option value={getValue('source_of_funds')}>{getValue('source_of_funds')}</option>
+                                )}
+                            </select>
                         </div>
 
                         {/* EDITABLE: Highest Education */}
@@ -993,7 +1040,7 @@ const EditableViewModal = ({
                             <label className={`text-sm ${subTextClass}`}>Income from Farming</label>
                             <Input
                                 type="number"
-                                value={normalizedData.financial_infos?.income_farming || ""}
+                                value={getValue('income_farming', normalizedData.financial_infos?.income_farming || "")}
                                 onChange={(e) => handleFieldChange('income_farming', e.target.value)}
                                 className={inputClass}
                                 placeholder="0.00"
@@ -1005,7 +1052,7 @@ const EditableViewModal = ({
                             <label className={`text-sm ${subTextClass}`}>Income from Non-Farming</label>
                             <Input
                                 type="number"
-                                value={normalizedData.financial_infos?.income_non_farming || ""}
+                                value={getValue('income_non_farming', normalizedData.financial_infos?.income_non_farming || "")}
                                 onChange={(e) => handleFieldChange('income_non_farming', e.target.value)}
                                 className={inputClass}
                                 placeholder="0.00"
@@ -1112,16 +1159,9 @@ const EditableViewModal = ({
                                             <label className={`text-sm ${subTextClass}`}>Total Farm Area (ha)</label>
                                             <Input
                                                 type="number"
-                                                step="0.01"
                                                 value={parcel.total_farm_area_ha || ''}
-                                                onChange={(e) => {
-                                                    const currentParcels = getValue('farm_parcels', fullData.farm_parcels || []);
-                                                    const newParcels = currentParcels.map((p, idx) =>
-                                                        idx === parcelIndex ? { ...p, total_farm_area_ha: e.target.value } : p
-                                                    );
-                                                    handleFieldChange('farm_parcels', newParcels);
-                                                }}
-                                                className={inputClass}
+                                                readOnly
+                                                className={`${inputClass} opacity-70 cursor-not-allowed`}
                                                 placeholder="0.00"
                                             />
                                         </div>
@@ -1634,7 +1674,7 @@ const EditableViewModal = ({
                     </div>
                 )}
             </div>
-        </Modal>
+        </Modal >
     );
 };
 
