@@ -16,6 +16,7 @@ import ApiService from "./services/api";
 import { supabase } from "./services/api"; // ✅ Add { supabase }
 import { Toast } from "@/components/ui/toast";
 import "@fortawesome/fontawesome-free/css/all.min.css";
+import Footer from "./components/Footer";
 
 export const ThemeContext = createContext();
 // Main App Content Component (inside Router)
@@ -244,10 +245,10 @@ const AppContent = () => {
     user?.first_name && user?.last_name
       ? `${user.first_name} ${user.last_name}`
       : user?.first_name ||
-        user?.firstName ||
-        user?.lastName ||
-        user?.email ||
-        "User";
+      user?.firstName ||
+      user?.lastName ||
+      user?.email ||
+      "User";
 
   if (!isLoggedIn) {
     return (
@@ -333,7 +334,7 @@ const AppContent = () => {
         )}
 
         <ConnectionStatus />
-        
+
         <div className="flex h-screen overflow-hidden">
           {isSidebarOpen && (
             <div
@@ -365,7 +366,8 @@ const AppContent = () => {
               user={user}
             />
             <main className="flex-1 overflow-y-auto bg-background text-foreground transition-colors duration-300">
-              <AppRoutes user={user} />
+              <AppRoutes user={user} setUser={setUser} />
+              <Footer />
             </main>
           </div>
         </div>
