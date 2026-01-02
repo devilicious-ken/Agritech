@@ -888,8 +888,8 @@ const handleSubmit = async () => {
   const renderRegistrySelector = () => (
     
     
-    <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B] mb-6">
-      <h3 className="text-gray-200 font-medium mb-4">Select Registry Type</h3>
+    <div className="bg-card p-4 rounded-md border border-gray-700/30 dark:border-gray-700/30 mb-6">
+      <h3 className="text-foreground font-medium mb-4">Select Registry Type</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
         {[
           { value: 'farmer', label: 'Farmer', desc: 'Register as a farmer with crop and animal production details', color: '#3366CC' },
@@ -899,8 +899,8 @@ const handleSubmit = async () => {
             key={type.value}
             className={`border rounded-md p-4 cursor-pointer transition-colors ${
               registryType === type.value
-                ? `border-${type.color} bg-${type.color}/20`
-                : 'border-[#3B3B3B] bg-[#252525] hover:bg-[#1A1A1A]'
+                ? 'border-blue-600 dark:border-blue-600/50 bg-blue-600/10'
+                : 'border border-gray-700/30 dark:border-gray-700/30 bg-card hover:bg-muted'
             }`}
             onClick={() => setRegistryType(type.value)}
           >
@@ -909,11 +909,11 @@ const handleSubmit = async () => {
                 type="radio"
                 checked={registryType === type.value}
                 onChange={() => setRegistryType(type.value)}
-                className={`h-4 w-4 text-${type.color}`}
+                className="h-4 w-4 text-blue-600"
               />
-              <label className="ml-2 text-gray-200 font-medium">{type.label}</label>
+              <label className="ml-2 text-foreground font-medium">{type.label}</label>
             </div>
-            <p className="text-gray-400 text-sm">{type.desc}</p>
+            <p className="text-muted-foreground text-sm">{type.desc}</p>
           </div>
         ))}
       </div>
@@ -928,9 +928,9 @@ const renderPersonalInfoTab = () => (
   <div className="space-y-6">
     {/* Reference Number */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Reference Number <span className="text-red-500">*</span></label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Reference Number <span className="text-red-500">*</span></label>
       <div className="flex">
-        <span className="inline-flex items-center px-2 min-w-[85px] text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+        <span className="inline-flex items-center px-2 min-w-[85px] text-sm text-muted-foreground bg-muted/50 border border-r-0 border border-gray-700/30 dark:border-gray-700/30 rounded-l-md">
             10-43-11-
         </span>
         <Input 
@@ -959,7 +959,7 @@ const renderPersonalInfoTab = () => (
               reference_no: digits ? `10-43-11-${formatted}` : ''
             }));
           }}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground rounded-l-none" 
           placeholder="000-000000" 
           maxLength={10} // 3+1+6
           required
@@ -970,45 +970,45 @@ const renderPersonalInfoTab = () => (
     {/* Name Fields */}
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Surname <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Surname <span className="text-red-500">*</span></label>
         <Input 
           name="surname"
           value={formInputs.surname}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="Surname" 
           required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">First Name <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">First Name <span className="text-red-500">*</span></label>
         <Input 
           name="first_name"
           value={formInputs.first_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="First Name" 
           required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Middle Name <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Middle Name <span className="text-red-500">*</span></label>
         <Input 
           name="middle_name"
           value={formInputs.middle_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="Middle Name" 
           required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Extension Name</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Extension Name</label>
         <select 
           name="extension_name"
           value={formInputs.extension_name}
           onChange={handleInputChange}
-          className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+          className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
         >
           <option value="">Select</option>
           {extensionOptions.map(ext => (
@@ -1020,7 +1020,7 @@ const renderPersonalInfoTab = () => (
 
     {/* Sex */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Sex <span className="text-red-500">*</span></label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Sex <span className="text-red-500">*</span></label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1032,7 +1032,7 @@ const renderPersonalInfoTab = () => (
             className="h-4 w-4 text-blue-600" 
             required
           />
-          <span className="ml-2 text-gray-400">Male</span>
+          <span className="ml-2 text-muted-foreground">Male</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1044,7 +1044,7 @@ const renderPersonalInfoTab = () => (
             className="h-4 w-4 text-blue-600" 
             required
           />
-          <span className="ml-2 text-gray-400">Female</span>
+          <span className="ml-2 text-muted-foreground">Female</span>
         </label>
       </div>
     </div>
@@ -1052,9 +1052,9 @@ const renderPersonalInfoTab = () => (
     {/* Contact Numbers */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Mobile Number <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Mobile Number <span className="text-red-500">*</span></label>
         <div className="flex">
-          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+          <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted/50 border border-r-0 border border-gray-700/30 dark:border-gray-700/30 rounded-l-md">
             +63 
           </span>
           <Input 
@@ -1067,7 +1067,7 @@ const renderPersonalInfoTab = () => (
                 mobile_number: digits ? `+63 - ${digits}` : ''
               }));
             }}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground rounded-l-none" 
             placeholder="0000000000"
             maxLength={10}
             required
@@ -1075,9 +1075,9 @@ const renderPersonalInfoTab = () => (
         </div>
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Landline Number (Optional)</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Landline Number (Optional)</label>
         <div className="flex">
-          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+          <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted/50 border border-r-0 border border-gray-700/30 dark:border-gray-700/30 rounded-l-md">
             +63 
           </span>
           <Input 
@@ -1090,7 +1090,7 @@ const renderPersonalInfoTab = () => (
                 landline_number: digits ? `+63 - ${digits}` : ''
               }));
             }}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground rounded-l-none" 
             placeholder="0000000000"
             maxLength={10}
           />
@@ -1101,23 +1101,23 @@ const renderPersonalInfoTab = () => (
     {/* Birth Information */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Date of Birth <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Date of Birth <span className="text-red-500">*</span></label>
         <Input 
           name="date_of_birth"
           value={formInputs.date_of_birth}
           onChange={handleInputChange}
           type="date"
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Place of Birth</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Place of Birth</label>
         <Input 
           name="place_of_birth"
           value={formInputs.place_of_birth}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="City/Municipality, Province" 
         />
       </div>
@@ -1125,11 +1125,11 @@ const renderPersonalInfoTab = () => (
 
     {/* Religion */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Religion</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Religion</label>
       <select 
         value={religion}
         onChange={(e) => setReligion(e.target.value)}
-        className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+        className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
       >
         <option value="">Select</option>
         {religionOptions.map(rel => (
@@ -1141,7 +1141,7 @@ const renderPersonalInfoTab = () => (
           name="religion_other"
           value={formInputs.religion_other}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200 mt-2" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground mt-2" 
           placeholder="Specify religion" 
         />
       )}
@@ -1149,11 +1149,11 @@ const renderPersonalInfoTab = () => (
 
     {/* Civil Status */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Civil Status <span className="text-red-500">*</span></label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Civil Status <span className="text-red-500">*</span></label>
       <select 
         value={civilStatus}
         onChange={(e) => setCivilStatus(e.target.value)}
-        className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+        className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
         required
       >
         <option value="">Select</option>
@@ -1166,12 +1166,12 @@ const renderPersonalInfoTab = () => (
     {/* Spouse Name (conditional) */}
     {civilStatus === 'Married' && (
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Name of Spouse</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Name of Spouse</label>
         <Input 
           name="spouse_name"
           value={formInputs.spouse_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="Spouse's full name" 
         />
       </div>
@@ -1179,12 +1179,12 @@ const renderPersonalInfoTab = () => (
 
     {/* Mother's Maiden Name */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Mother's Maiden Full Name <span className="text-red-500">*</span></label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Mother's Maiden Full Name <span className="text-red-500">*</span></label>
       <Input 
         name="mother_full_name"
         value={formInputs.mother_full_name}
         onChange={handleInputChange}
-        className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+        className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
         placeholder="Mother's full maiden name" 
         required
       />
@@ -1192,7 +1192,7 @@ const renderPersonalInfoTab = () => (
 
     {/* Household Head */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Household Head</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Household Head</label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1202,7 +1202,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsHouseholdHead(true)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">Yes</span>
+          <span className="ml-2 text-muted-foreground">Yes</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1212,7 +1212,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsHouseholdHead(false)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">No</span>
+          <span className="ml-2 text-muted-foreground">No</span>
         </label>
       </div>
     </div>
@@ -1222,57 +1222,57 @@ const renderPersonalInfoTab = () => (
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Name of Household Head</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">Name of Household Head</label>
             <Input 
               name="household_head_name"
               value={formInputs.household_head_name}
               onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+              className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
               placeholder="Full name" 
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">Relationship to Household Head</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">Relationship to Household Head</label>
             <Input 
               name="household_head_relationship"
               value={formInputs.household_head_relationship}
               onChange={handleInputChange}
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+              className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
               placeholder="e.g., Son, Daughter" 
             />
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">No. of Living Household Members</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">No. of Living Household Members</label>
             <Input 
               name="household_members_count"
               value={formInputs.household_members_count}
               onChange={handleInputChange}
               type="number"
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+              className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
               placeholder="0" 
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">No. of Males</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">No. of Males</label>
             <Input 
               name="household_males"
               value={formInputs.household_males}
               onChange={handleInputChange}
               type="number"
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+              className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
               placeholder="0" 
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-400 mb-1 block">No. of Females</label>
+            <label className="text-sm font-medium text-muted-foreground mb-1 block">No. of Females</label>
             <Input 
               name="household_females"
               value={formInputs.household_females}
               onChange={handleInputChange}
               type="number"
-              className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+              className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
               placeholder="0" 
             />
           </div>
@@ -1282,12 +1282,12 @@ const renderPersonalInfoTab = () => (
 
     {/* Highest Formal Education */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Highest Formal Education</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Highest Formal Education</label>
       <select 
         name="highest_education"
         value={formInputs.highest_education}
         onChange={handleInputChange}
-        className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+        className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
       >
         <option value="">Select</option>
         {educationOptions.map(edu => (
@@ -1298,7 +1298,7 @@ const renderPersonalInfoTab = () => (
 
     {/* PWD */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Person with Disability (PWD)</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Person with Disability (PWD)</label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1308,7 +1308,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsPwd(true)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">Yes</span>
+          <span className="ml-2 text-muted-foreground">Yes</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1318,14 +1318,14 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsPwd(false)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">No</span>
+          <span className="ml-2 text-muted-foreground">No</span>
         </label>
       </div>
     </div>
 
     {/* 4Ps */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">4Ps Beneficiary</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">4Ps Beneficiary</label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1335,7 +1335,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIs4ps(true)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">Yes</span>
+          <span className="ml-2 text-muted-foreground">Yes</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1345,14 +1345,14 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIs4ps(false)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">No</span>
+          <span className="ml-2 text-muted-foreground">No</span>
         </label>
       </div>
     </div>
 
     {/* Indigenous */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Member of Indigenous Group</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Member of Indigenous Group</label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1362,7 +1362,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsIndigenous(true)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">Yes</span>
+          <span className="ml-2 text-muted-foreground">Yes</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1372,7 +1372,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsIndigenous(false)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">No</span>
+          <span className="ml-2 text-muted-foreground">No</span>
         </label>
       </div>
       {isIndigenous && (
@@ -1380,7 +1380,7 @@ const renderPersonalInfoTab = () => (
           name="indigenous_group_name"
           value={formInputs.indigenous_group_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200 mt-2" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground mt-2" 
           placeholder="Specify indigenous group name" 
         />
       )}
@@ -1388,13 +1388,13 @@ const renderPersonalInfoTab = () => (
 
     {/* Government ID - Always Required */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Government ID <span className="text-red-500">*</span></label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Government ID <span className="text-red-500">*</span></label>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
         <select 
           name="government_id_type"
           value={formInputs.government_id_type}
           onChange={handleInputChange}
-          className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+          className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
           required
         >
           <option value="">Select ID Type</option>
@@ -1406,7 +1406,7 @@ const renderPersonalInfoTab = () => (
           name="government_id_number"
           value={formInputs.government_id_number}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="ID Number" 
           disabled={!formInputs.government_id_type}
           required
@@ -1416,7 +1416,7 @@ const renderPersonalInfoTab = () => (
 
     {/* Member of Coop */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Member of Association/Cooperative</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Member of Association/Cooperative</label>
       <div className="flex gap-4">
         <label className="flex items-center">
           <input 
@@ -1426,7 +1426,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsMemberCoop(true)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">Yes</span>
+          <span className="ml-2 text-muted-foreground">Yes</span>
         </label>
         <label className="flex items-center">
           <input 
@@ -1436,7 +1436,7 @@ const renderPersonalInfoTab = () => (
             onChange={() => setIsMemberCoop(false)}
             className="h-4 w-4 text-blue-600" 
           />
-          <span className="ml-2 text-gray-400">No</span>
+          <span className="ml-2 text-muted-foreground">No</span>
         </label>
       </div>
       {isMemberCoop && (
@@ -1444,7 +1444,7 @@ const renderPersonalInfoTab = () => (
           name="coop_name"
           value={formInputs.coop_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200 mt-2" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground mt-2" 
           placeholder="Specify association/cooperative name" 
         />
       )}
@@ -1453,20 +1453,20 @@ const renderPersonalInfoTab = () => (
     {/* Emergency Contact */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Person to Notify in Case of Emergency <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Person to Notify in Case of Emergency <span className="text-red-500">*</span></label>
         <Input 
           name="emergency_contact_name"
           value={formInputs.emergency_contact_name}
           onChange={handleInputChange}
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="Full name" 
           required
         />
       </div>
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Contact Number <span className="text-red-500">*</span></label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Contact Number <span className="text-red-500">*</span></label>
         <div className="flex">
-          <span className="inline-flex items-center px-3 text-sm text-gray-400 bg-[#1A1A1A] border border-r-0 border-[#3B3B3B] rounded-l-md">
+          <span className="inline-flex items-center px-3 text-sm text-muted-foreground bg-muted/50 border border-r-0 border border-gray-700/30 dark:border-gray-700/30 rounded-l-md">
             +63 
           </span>
           <Input 
@@ -1479,7 +1479,7 @@ const renderPersonalInfoTab = () => (
                 emergency_contact_phone: digits ? `+63 ${digits}` : ''
               }));
             }}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200 rounded-l-none" 
+            className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground rounded-l-none" 
             placeholder="0000000000"
             maxLength={10}
             disabled={!formInputs.emergency_contact_name}
@@ -1496,18 +1496,18 @@ const renderPersonalInfoTab = () => (
 const renderAddressTab = () => (
   <div className="space-y-6">
     <div>
-      <h3 className="text-lg font-medium text-gray-200 mb-4">Address</h3>
+      <h3 className="text-lg font-medium text-foreground mb-4">Address</h3>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Barangay <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Barangay <span className="text-red-500">*</span></label>
           <select 
             value={selectedBarangay}
             onChange={(e) => {
               setSelectedBarangay(e.target.value);
               setSelectedPurok('');
             }}
-            className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+            className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
             required
           >
             <option value="">Select Barangay</option>
@@ -1517,12 +1517,12 @@ const renderAddressTab = () => (
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Purok/Sitio <span className="text-red-500">*</span></label>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Purok/Sitio <span className="text-red-500">*</span></label>
           <select 
             value={selectedPurok}
             onChange={(e) => setSelectedPurok(e.target.value)}
             disabled={!selectedBarangay}
-            className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+            className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
             required
           >
             <option value="">Select Purok</option>
@@ -1535,32 +1535,32 @@ const renderAddressTab = () => (
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Municipality/City</label>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Municipality/City</label>
           <Input 
             name="perm_municipality_city"
             value={formInputs.perm_municipality_city}
             onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+            className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Province</label>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Province</label>
           <Input 
             name="perm_province"
             value={formInputs.perm_province}
             onChange={handleInputChange}
-            className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+            className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           />
         </div>
 
         <div>
-          <label className="text-sm font-medium text-gray-400 mb-1 block">Region</label>
+          <label className="text-sm font-medium text-muted-foreground mb-1 block">Region</label>
           <select 
             name="perm_region"
             value={formInputs.perm_region}
             onChange={handleInputChange}
-            className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+            className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
           >
             {regionOptions.map(region => (
               <option key={region} value={region}>{region}</option>
@@ -1576,9 +1576,9 @@ const renderAddressTab = () => (
 const renderFarmDataTab = () => (
   <div className="space-y-6">
     {/* Farm Parcel Forms ONLY – farming activity removed */}
-    <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B]">
+    <div className="bg-card p-4 rounded-md border border-gray-700/30 dark:border-gray-700/30">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-gray-200 font-medium">Farm Parcels (Max 3)</h3>
+        <h3 className="text-foreground font-medium">Farm Parcels (Max 3)</h3>
         <Button
           type="button"
           onClick={() => addFormItem(setFarmParcels, farmParcels)}
@@ -1592,15 +1592,15 @@ const renderFarmDataTab = () => (
       {farmParcels.map((parcel, index) => (
         <div
           key={parcel.id}
-          className="border border-[#3B3B3B] rounded-md p-4 mb-4 bg-[#1A1A1A]"
+          className="border border-gray-700/30 dark:border-gray-700/30 rounded-md p-4 mb-4 bg-muted/50"
         >
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-gray-400 font-medium">Farm Parcel {index + 1}</h4>
+            <h4 className="text-muted-foreground font-medium">Farm Parcel {index + 1}</h4>
             {farmParcels.length > 1 && (
               <Button
                 type="button"
                 onClick={() => removeFormItem(setFarmParcels, farmParcels, parcel.id)}
-                className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1 text-xs"
+                className="bg-red-600 hover:bg-red-600/80 text-foreground px-2 py-1 text-xs"
               >
                 <Minus className="h-3 w-3" />
               </Button>
@@ -1609,11 +1609,11 @@ const renderFarmDataTab = () => (
 
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-400 mb-1 block">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Name of Farmer's in Rotation <span className="text-red-500">*</span>
               </label>
               <Input
-                className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground"
                 placeholder="Name of Farmer's in Rotation"
                 value={parcel.farmer_rotation || ''}
                 onChange={(e) => {
@@ -1627,11 +1627,11 @@ const renderFarmDataTab = () => (
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-400 mb-1 block">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Farm Location <span className="text-red-500">*</span>
               </label>
               <Input
-                className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground"
                 placeholder="Barangay, City/Municipality"
                 value={parcel.farm_location || ''}
                 onChange={(e) => {
@@ -1646,11 +1646,11 @@ const renderFarmDataTab = () => (
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-400 mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Ownership Document <span className="text-red-500">*</span>
                 </label>
                 <select
-                  className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
+                  className="w-full h-10 px-3 py-2 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
                   value={parcel.ownership_doc || ''}
                   onChange={(e) => {
                     const newParcels = farmParcels.map((p) =>
@@ -1669,11 +1669,11 @@ const renderFarmDataTab = () => (
                 </select>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-400 mb-1 block">
+                <label className="text-sm font-medium text-muted-foreground mb-1 block">
                   Ownership Document No. <span className="text-red-500">*</span>
                 </label>
                 <Input
-                  className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200"
+                  className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground"
                   placeholder="Document Number"
                   value={parcel.ownership_doc_no || ''}
                   onChange={(e) => {
@@ -1689,11 +1689,11 @@ const renderFarmDataTab = () => (
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-400 mb-1 block">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">
                 Ownership Type <span className="text-red-500">*</span>
               </label>
               <select
-                className="w-full h-10 px-3 py-2 bg-[#1A1A1A] border border-[#3B3B3B] rounded-md text-gray-200"
+                className="w-full h-10 px-3 py-2 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
                 value={parcel.ownership_type || ''}
                 onChange={(e) => {
                   const newParcels = farmParcels.map((p) =>
@@ -1715,7 +1715,7 @@ const renderFarmDataTab = () => (
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="text-sm font-medium text-gray-400 mb-2 block">
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Within Ancestral Domain
                 </label>
                 <div className="flex gap-4">
@@ -1732,7 +1732,7 @@ const renderFarmDataTab = () => (
                       }}
                       className="h-4 w-4 text-blue-600"
                     />
-                    <label className="ml-2 text-gray-400">Yes</label>
+                    <label className="ml-2 text-muted-foreground">Yes</label>
                   </div>
                   <div className="flex items-center">
                     <input
@@ -1747,12 +1747,12 @@ const renderFarmDataTab = () => (
                       }}
                       className="h-4 w-4 text-blue-600"
                     />
-                    <label className="ml-2 text-gray-400">No</label>
+                    <label className="ml-2 text-muted-foreground">No</label>
                   </div>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-400 mb-2 block">
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
                   Agrarian Reform Beneficiary
                 </label>
                 <div className="flex gap-4">
@@ -1769,7 +1769,7 @@ const renderFarmDataTab = () => (
                       }}
                       className="h-4 w-4 text-blue-600"
                     />
-                    <label className="ml-2 text-gray-400">Yes</label>
+                    <label className="ml-2 text-muted-foreground">Yes</label>
                   </div>
                   <div className="flex items-center">
                     <input
@@ -1784,23 +1784,23 @@ const renderFarmDataTab = () => (
                       }}
                       className="h-4 w-4 text-blue-600"
                     />
-                    <label className="ml-2 text-gray-400">No</label>
+                    <label className="ml-2 text-muted-foreground">No</label>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Farm Parcel Information */}
-            <div className="border-t border-[#3B3B3B] pt-4">
+            <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
               <div className="flex items-center justify-between mb-3">
-                <h5 className="text-gray-400 font-medium">
+                <h5 className="text-muted-foreground font-medium">
                   Farm Parcel Information (Max 5)
                 </h5>
                 <Button
                   type="button"
                   onClick={() => addParcelInfo(parcel.id)}
                   disabled={parcelInfo.filter(p => p.parcel_id === parcel.id).length >= 5}
-                  className="bg-blue-600/20 hover:bg-blue-600/80 text-gray-200 px-2 py-1 text-xs disabled:opacity-50"
+                  className="bg-blue-600/20 hover:bg-blue-600/80 text-foreground px-2 py-1 text-xs disabled:opacity-50"
                 >
                   <Plus className="h-3 w-3 mr-1" /> Add Info
                 </Button>
@@ -1809,17 +1809,17 @@ const renderFarmDataTab = () => (
               {parcelInfo.filter(p => p.parcel_id === parcel.id).map((info, infoIndex) => (
                 <div
                   key={info.id}
-                  className="border border-[#3B3B3B] rounded-md p-3 mb-3 bg-[#1A1A1A]"
+                  className="border border-gray-700/30 dark:border-gray-700/30 rounded-md p-3 mb-3 bg-muted/50"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-gray-400 text-sm font-medium">
+                    <span className="text-muted-foreground text-sm font-medium">
                       Parcel Info {infoIndex + 1}
                     </span>
                     {parcelInfo.length > 1 && (
                       <Button
                         type="button"
                         onClick={() => removeParcelInfo(info.id)}
-                        className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-1 py-1 text-xs"
+                        className="bg-red-600 hover:bg-red-600/80 text-foreground px-1 py-1 text-xs"
                       >
                         <Minus className="h-3 w-3" />
                       </Button>
@@ -1829,11 +1829,11 @@ const renderFarmDataTab = () => (
                   {/* Row 1: Crop/Commodity + conditional fields */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-gray-400 mb-1 block">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
                         Crop/Commodity
                       </label>
                       <select
-                        className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                        className="w-full h-8 px-2 py-1 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded text-foreground text-sm"
                         value={info.crop_commodity || ''}
                         onChange={(e) => {
                           const value = e.target.value;
@@ -1867,12 +1867,12 @@ const renderFarmDataTab = () => (
                     {info.crop_commodity === 'Crops' && (
                       <>
                         <div>
-                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">
                             Crop Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             list={`cropList-${info.id}`}
-                            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                            className="w-full h-8 px-2 py-1 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded text-foreground text-sm"
                             placeholder="Search or type crop name..."
                             value={info.crop_name || ''}
                             onChange={(e) => {
@@ -1894,11 +1894,11 @@ const renderFarmDataTab = () => (
                         {/* Corn Type - only show when Crop Name is Corn */}
                         {info.crop_name === 'Corn' && (
                           <div>
-                            <label className="text-xs font-medium text-gray-400 mb-1 block">
+                            <label className="text-xs font-medium text-muted-foreground mb-1 block">
                               Corn Type <span className="text-red-500">*</span>
                             </label>
                             <select
-                              className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                              className="w-full h-8 px-2 py-1 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded text-foreground text-sm"
                               value={info.corn_type || ''}
                               onChange={(e) => {
                                 const newParcelInfo = parcelInfo.map((pi) =>
@@ -1920,11 +1920,11 @@ const renderFarmDataTab = () => (
                           </div>
                         )}
                         <div>
-                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">
                             Size (ha) <span className="text-red-500">*</span>
                           </label>
                           <Input
-                            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                            className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground h-8 text-sm"
                             type="number"
                             step="0.01"
                             value={info.size || ''}
@@ -1947,12 +1947,12 @@ const renderFarmDataTab = () => (
                       info.crop_commodity === 'Poultry') && (
                       <>
                         <div>
-                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">
                             Animal Name <span className="text-red-500">*</span>
                           </label>
                           <input
                             list={`animalList-${info.id}`}
-                            className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                            className="w-full h-8 px-2 py-1 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded text-foreground text-sm"
                             placeholder="Search or type animal name..."
                             value={info.animal_name || ''}
                             onChange={(e) => {
@@ -1972,11 +1972,11 @@ const renderFarmDataTab = () => (
                           </datalist>
                         </div>
                         <div>
-                          <label className="text-xs font-medium text-gray-400 mb-1 block">
+                          <label className="text-xs font-medium text-muted-foreground mb-1 block">
                             No. of Heads
                           </label>
                           <Input
-                            className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                            className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground h-8 text-sm"
                             type="number"
                             value={info.head_count || ''}
                             onChange={(e) => {
@@ -1997,11 +1997,11 @@ const renderFarmDataTab = () => (
                   {info.crop_commodity === 'Crops' && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
                       <div>
-                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
                           Farm Type <span className="text-red-500">*</span>
                         </label>
                         <select
-                          className="w-full h-8 px-2 py-1 bg-[#1A1A1A] border border-[#3B3B3B] rounded text-gray-200 text-sm"
+                          className="w-full h-8 px-2 py-1 bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 rounded text-foreground text-sm"
                           value={info.farm_type || ''}
                           onChange={(e) => {
                             const newParcelInfo = parcelInfo.map((pi) =>
@@ -2021,7 +2021,7 @@ const renderFarmDataTab = () => (
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
                           Organic Practitioner
                         </label>
                         <div className="flex gap-3 h-8 items-center">
@@ -2040,7 +2040,7 @@ const renderFarmDataTab = () => (
                               }}
                               className="h-3 w-3 text-blue-600"
                             />
-                            <label className="ml-1 text-gray-400 text-sm">Y</label>
+                            <label className="ml-1 text-muted-foreground text-sm">Y</label>
                           </div>
                           <div className="flex items-center">
                             <input
@@ -2057,16 +2057,16 @@ const renderFarmDataTab = () => (
                               }}
                               className="h-3 w-3 text-blue-600"
                             />
-                            <label className="ml-1 text-gray-400 text-sm">N</label>
+                            <label className="ml-1 text-muted-foreground text-sm">N</label>
                           </div>
                         </div>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-400 mb-1 block">
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
                           Remarks
                         </label>
                         <Input
-                          className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                          className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground h-8 text-sm"
                           placeholder="Remarks"
                           value={info.remarks || ''}
                           onChange={(e) => {
@@ -2086,11 +2086,11 @@ const renderFarmDataTab = () => (
                   {(info.crop_commodity === 'Livestock' ||
                     info.crop_commodity === 'Poultry') && (
                     <div className="mt-3">
-                      <label className="text-xs font-medium text-gray-400 mb-1 block">
+                      <label className="text-xs font-medium text-muted-foreground mb-1 block">
                         Remarks
                       </label>
                       <Input
-                        className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 h-8 text-sm"
+                        className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground h-8 text-sm"
                         placeholder="Remarks"
                         value={info.remarks || ''}
                         onChange={(e) => {
@@ -2117,8 +2117,8 @@ const renderFarmDataTab = () => (
  // ========== FISH DATA TAB ==========
  const renderFishDataTab = () => (
   <div className="space-y-6">
-    <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B]">
-      <h3 className="text-gray-200 font-medium mb-4">Type of Fishing Activity</h3>
+    <div className="bg-card p-4 rounded-md border border-gray-700/30 dark:border-gray-700/30">
+      <h3 className="text-foreground font-medium mb-4">Type of Fishing Activity</h3>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {[
@@ -2141,18 +2141,18 @@ const renderFarmDataTab = () => (
               }}
               className="h-4 w-4 text-green-600" 
             />
-            <label className="ml-2 text-gray-400">{activity.label}</label>
+            <label className="ml-2 text-muted-foreground">{activity.label}</label>
           </div>
         ))}
       </div>
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h4 className="text-gray-400 font-medium">Other Activities</h4>
+          <h4 className="text-muted-foreground font-medium">Other Activities</h4>
           <Button 
             type="button"
             onClick={() => addFormItem(setFishingActivities, fishingActivities)}
-            className="bg-green-600/20 hover:bg-green-600/20/80 text-gray-200 px-3 py-1 text-xs"
+            className="bg-green-600/20 hover:bg-green-600/20/80 text-foreground px-3 py-1 text-xs"
           >
             <Plus className="h-3 w-3 mr-1" /> Add Activity
           </Button>
@@ -2160,7 +2160,7 @@ const renderFarmDataTab = () => (
         {fishingActivities.map((activity) => (
           <div key={activity.id} className="flex items-center gap-3 mb-2">
             <Input 
-              className="bg-[#1A1A1A] border-[#3B3B3B] text-gray-200 flex-1" 
+              className="bg-muted/50 border border-gray-700/30 dark:border-gray-700/30 text-foreground flex-1" 
               placeholder="Specify Activity"
               value={activity.activity || ''}
               onChange={(e) => {
@@ -2173,7 +2173,7 @@ const renderFarmDataTab = () => (
             <Button 
               type="button"
               onClick={() => removeFormItem(setFishingActivities, fishingActivities, activity.id)}
-              className="bg-red-600 hover:bg-red-600/80 text-gray-200 px-2 py-1"
+              className="bg-red-600 hover:bg-red-600/80 text-foreground px-2 py-1"
             >
               <Minus className="h-3 w-3" />
             </Button>
@@ -2193,7 +2193,7 @@ const renderFinancialTab = () => (
 
     {/* TIN Number */}
     <div>
-      <label className="text-sm font-medium text-gray-400 mb-1 block">Tax Identification Number (TIN)</label>
+      <label className="text-sm font-medium text-muted-foreground mb-1 block">Tax Identification Number (TIN)</label>
       <Input 
         name="tin_number"
         value={formInputs.tin_number?.replace('XXX-XXX-XXX-XXX', '') || ''}
@@ -2209,7 +2209,7 @@ const renderFinancialTab = () => (
           
           setFormInputs(prev => ({ ...prev, tin_number: formatted }));
         }}
-        className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+        className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
         placeholder="000-000-000-000" 
         maxLength={15}
       />
@@ -2219,12 +2219,12 @@ const renderFinancialTab = () => (
 
     {/* Source of Funds */}
 <div>
-  <label className="text-sm font-medium text-gray-400 mb-1 block">Source of Funds</label>
+  <label className="text-sm font-medium text-muted-foreground mb-1 block">Source of Funds</label>
   <select 
     name="source_of_funds"
     value={formInputs.source_of_funds}
     onChange={handleInputChange}
-    className="w-full h-10 px-3 py-2 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200"
+    className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
   >
     <option value="">Select</option>
     <option value="salary">Salary</option>
@@ -2240,37 +2240,37 @@ const renderFinancialTab = () => (
     {/* Income */}
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Farming Income (Annual)</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Farming Income (Annual)</label>
         <Input 
           name="income_farming"
           value={formInputs.income_farming}
           onChange={handleInputChange}
           type="number"
           step="0.01"
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="0.00" 
         />
       </div>
 
       <div>
-        <label className="text-sm font-medium text-gray-400 mb-1 block">Non-Farming Income (Annual)</label>
+        <label className="text-sm font-medium text-muted-foreground mb-1 block">Non-Farming Income (Annual)</label>
         <Input 
           name="income_non_farming"
           value={formInputs.income_non_farming}
           onChange={handleInputChange}
           type="number"
           step="0.01"
-          className="bg-[#252525] border-[#3B3B3B] text-gray-200" 
+          className="bg-card border border-gray-700/30 dark:border-gray-700/30 text-foreground" 
           placeholder="0.00" 
         />
       </div>
     </div>
 
     {/* Total Annual Income (calculated) */}
-    <div className="bg-[#1C1C1C] p-4 rounded-md border border-[#3B3B3B]">
+    <div className="bg-card p-4 rounded-md border border-gray-700/30 dark:border-gray-700/30">
       <div className="flex justify-between items-center">
-        <span className="text-gray-400 font-medium">Total Annual Income:</span>
-        <span className="text-gray-200 font-semibold text-lg">
+        <span className="text-muted-foreground font-medium">Total Annual Income:</span>
+        <span className="text-foreground font-semibold text-lg">
           ₱ {(
             (parseFloat(formInputs.income_farming) || 0) + 
             (parseFloat(formInputs.income_non_farming) || 0)
@@ -2321,80 +2321,80 @@ const renderPreviewTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-[#252525] p-4 rounded-md border border-[#3B3B3B]">
-        <h3 className="text-gray-200 font-medium mb-4">Review Registration Information</h3>
+      <div className="bg-card p-4 rounded-md border border-gray-700/30 dark:border-gray-700/30">
+        <h3 className="text-foreground font-medium mb-4">Review Registration Information</h3>
         <div className="space-y-4">
           
           {/* Personal Information - READ FROM formInputs STATE */}
 <div>
-  <h4 className="text-gray-400 font-medium mb-2">Personal Information</h4>
+  <h4 className="text-muted-foreground font-medium mb-2">Personal Information</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">Registry Type:</span>
-      <span className="text-gray-200 capitalize">{registryType}</span>
+      <span className="text-muted-foreground w-36">Registry Type:</span>
+      <span className="text-foreground capitalize">{registryType}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Reference Number:</span>
-      <span className="text-gray-200">{formInputs.reference_no || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Reference Number:</span>
+      <span className="text-foreground">{formInputs.reference_no || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Full Name:</span>
-      <span className="text-gray-200">
+      <span className="text-muted-foreground w-36">Full Name:</span>
+      <span className="text-foreground">
         {[formInputs.surname, formInputs.first_name, formInputs.middle_name, formInputs.extension_name]
           .filter(Boolean).join(' ') || 'Not provided'}
       </span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Sex:</span>
-      <span className="text-gray-200 capitalize">{formInputs.sex || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Sex:</span>
+      <span className="text-foreground capitalize">{formInputs.sex || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Birthdate:</span>
-      <span className="text-gray-200">{formInputs.date_of_birth || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Birthdate:</span>
+      <span className="text-foreground">{formInputs.date_of_birth || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Place of Birth:</span>
-      <span className="text-gray-200">{formInputs.place_of_birth || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Place of Birth:</span>
+      <span className="text-foreground">{formInputs.place_of_birth || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Mobile Number:</span>
-      <span className="text-gray-200">{formInputs.mobile_number || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Mobile Number:</span>
+      <span className="text-foreground">{formInputs.mobile_number || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Landline:</span>
-      <span className="text-gray-200">{formInputs.landline_number || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Landline:</span>
+      <span className="text-foreground">{formInputs.landline_number || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Mother's Name:</span>
-      <span className="text-gray-200">{formInputs.mother_full_name || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Mother's Name:</span>
+      <span className="text-foreground">{formInputs.mother_full_name || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Civil Status:</span>
-      <span className="text-gray-200">{civilStatus || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Civil Status:</span>
+      <span className="text-foreground">{civilStatus || 'Not provided'}</span>
     </div>
     {civilStatus === 'Married' && (
       <div className="flex">
-        <span className="text-gray-400 w-36">Spouse Name:</span>
-        <span className="text-gray-200">{formInputs.spouse_name || 'Not provided'}</span>
+        <span className="text-muted-foreground w-36">Spouse Name:</span>
+        <span className="text-foreground">{formInputs.spouse_name || 'Not provided'}</span>
       </div>
     )}
     <div className="flex">
-      <span className="text-gray-400 w-36">Religion:</span>
-      <span className="text-gray-200">{religion === 'Others' ? formInputs.religion_other : religion || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Religion:</span>
+      <span className="text-foreground">{religion === 'Others' ? formInputs.religion_other : religion || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Education:</span>
-      <span className="text-gray-200">{formInputs.highest_education || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Education:</span>
+      <span className="text-foreground">{formInputs.highest_education || 'Not provided'}</span>
     </div>
   </div>
 </div>
 
           {/* Address Information - READ FROM STATE */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <h4 className="text-gray-400 font-medium mb-2">Address Information</h4>
+<div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+  <h4 className="text-muted-foreground font-medium mb-2">Address Information</h4>
   <div>
-    <h5 className="text-gray-400 text-sm mb-1">Permanent Address</h5>
-    <p className="text-gray-200">
+    <h5 className="text-muted-foreground text-sm mb-1">Permanent Address</h5>
+    <p className="text-foreground">
       {[
         selectedPurok,
         selectedBarangay,
@@ -2407,34 +2407,34 @@ const renderPreviewTab = () => {
 </div>
 
 {/* Household Information - READ FROM STATE */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <h4 className="text-gray-400 font-medium mb-2">Household Information</h4>
+<div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+  <h4 className="text-muted-foreground font-medium mb-2">Household Information</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">Household Head:</span>
-      <span className="text-gray-200">{isHouseholdHead ? 'Yes' : 'No'}</span>
+      <span className="text-muted-foreground w-36">Household Head:</span>
+      <span className="text-foreground">{isHouseholdHead ? 'Yes' : 'No'}</span>
     </div>
     {!isHouseholdHead && (
       <>
         <div className="flex">
-          <span className="text-gray-400 w-36">Head's Name:</span>
-          <span className="text-gray-200">{formInputs.household_head_name || 'Not provided'}</span>
+          <span className="text-muted-foreground w-36">Head's Name:</span>
+          <span className="text-foreground">{formInputs.household_head_name || 'Not provided'}</span>
         </div>
         <div className="flex">
-          <span className="text-gray-400 w-36">Relationship:</span>
-          <span className="text-gray-200">{formInputs.household_head_relationship || 'Not provided'}</span>
+          <span className="text-muted-foreground w-36">Relationship:</span>
+          <span className="text-foreground">{formInputs.household_head_relationship || 'Not provided'}</span>
         </div>
         <div className="flex">
-          <span className="text-gray-400 w-36">Members Count:</span>
-          <span className="text-gray-200">{formInputs.household_members_count || 'Not provided'}</span>
+          <span className="text-muted-foreground w-36">Members Count:</span>
+          <span className="text-foreground">{formInputs.household_members_count || 'Not provided'}</span>
         </div>
         <div className="flex">
-          <span className="text-gray-400 w-36">Males:</span>
-          <span className="text-gray-200">{formInputs.household_males || 'Not provided'}</span>
+          <span className="text-muted-foreground w-36">Males:</span>
+          <span className="text-foreground">{formInputs.household_males || 'Not provided'}</span>
         </div>
         <div className="flex">
-          <span className="text-gray-400 w-36">Females:</span>
-          <span className="text-gray-200">{formInputs.household_females || 'Not provided'}</span>
+          <span className="text-muted-foreground w-36">Females:</span>
+          <span className="text-foreground">{formInputs.household_females || 'Not provided'}</span>
         </div>
       </>
     )}
@@ -2442,43 +2442,43 @@ const renderPreviewTab = () => {
 </div>
 
 {/* Status Information - READ FROM STATE */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <h4 className="text-gray-400 font-medium mb-2">Status Information</h4>
+<div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+  <h4 className="text-muted-foreground font-medium mb-2">Status Information</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">PWD:</span>
-      <span className="text-gray-200">{isPwd ? 'Yes' : 'No'}</span>
+      <span className="text-muted-foreground w-36">PWD:</span>
+      <span className="text-foreground">{isPwd ? 'Yes' : 'No'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">4Ps Beneficiary:</span>
-      <span className="text-gray-200">{is4ps ? 'Yes' : 'No'}</span>
+      <span className="text-muted-foreground w-36">4Ps Beneficiary:</span>
+      <span className="text-foreground">{is4ps ? 'Yes' : 'No'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Indigenous:</span>
-      <span className="text-gray-200">{isIndigenous ? 'Yes' : 'No'}</span>
+      <span className="text-muted-foreground w-36">Indigenous:</span>
+      <span className="text-foreground">{isIndigenous ? 'Yes' : 'No'}</span>
     </div>
     {isIndigenous && (
       <div className="flex">
-        <span className="text-gray-400 w-36">Group Name:</span>
-        <span className="text-gray-200">{formInputs.indigenous_group_name || 'Not provided'}</span>
+        <span className="text-muted-foreground w-36">Group Name:</span>
+        <span className="text-foreground">{formInputs.indigenous_group_name || 'Not provided'}</span>
       </div>
     )}
     <div className="flex">
-      <span className="text-gray-400 w-36">ID Type:</span>
-      <span className="text-gray-200">{formInputs.government_id_type || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">ID Type:</span>
+      <span className="text-foreground">{formInputs.government_id_type || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">ID Number:</span>
-      <span className="text-gray-200">{formInputs.government_id_number || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">ID Number:</span>
+      <span className="text-foreground">{formInputs.government_id_number || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Coop Member:</span>
-      <span className="text-gray-200">{isMemberCoop ? 'Yes' : 'No'}</span>
+      <span className="text-muted-foreground w-36">Coop Member:</span>
+      <span className="text-foreground">{isMemberCoop ? 'Yes' : 'No'}</span>
     </div>
     {isMemberCoop && (
       <div className="flex">
-        <span className="text-gray-400 w-36">Coop Name:</span>
-        <span className="text-gray-200">{formInputs.coop_name || 'Not provided'}</span>
+        <span className="text-muted-foreground w-36">Coop Name:</span>
+        <span className="text-foreground">{formInputs.coop_name || 'Not provided'}</span>
       </div>
     )}
   </div>
@@ -2486,16 +2486,16 @@ const renderPreviewTab = () => {
 
 
           {/* Emergency Contact - READ FROM formInputs STATE */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <h4 className="text-gray-400 font-medium mb-2">Emergency Contact</h4>
+<div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+  <h4 className="text-muted-foreground font-medium mb-2">Emergency Contact</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">Contact Person:</span>
-      <span className="text-gray-200">{formInputs.emergency_contact_name || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Contact Person:</span>
+      <span className="text-foreground">{formInputs.emergency_contact_name || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Contact Number:</span>
-      <span className="text-gray-200">{formInputs.emergency_contact_phone || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Contact Number:</span>
+      <span className="text-foreground">{formInputs.emergency_contact_phone || 'Not provided'}</span>
     </div>
   </div>
 </div>
@@ -2504,19 +2504,19 @@ const renderPreviewTab = () => {
 {(registryType === 'farmer' ||
   registryType === 'farmworker' ||
   registryType === 'agriyouth') && (
-  <div className="border-t border-[#3B3B3B] pt-4">
-    <h4 className="text-gray-400 font-medium mb-2">Farm Information</h4>
+  <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+    <h4 className="text-muted-foreground font-medium mb-2">Farm Information</h4>
 
     <div className="space-y-3">
       {/* Farm / Parcel Information */}
       {registryType === 'farmer' && farmParcels.length > 0 && (
-        <div className="border-t border-[#3B3B3B] pt-4">
-          <h4 className="text-gray-400 font-medium mb-2">Farm Parcel Information</h4>
+        <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+          <h4 className="text-muted-foreground font-medium mb-2">Farm Parcel Information</h4>
           
           {/* Total Hectares */}
-          <div className="mb-3 p-3 bg-[#1A1A1A] rounded-md border border-[#3B3B3B]">
+          <div className="mb-3 p-3 bg-muted/50 rounded-md border border-gray-700/30 dark:border-gray-700/30">
             <div className="flex items-center justify-between">
-              <span className="text-gray-400 font-medium">Total Farm Area:</span>
+              <span className="text-muted-foreground font-medium">Total Farm Area:</span>
               <span className="text-blue-400 font-semibold text-lg">
                 {parcelInfo
                   .filter(info => info.crop_commodity === 'Crops' && info.size)
@@ -2530,51 +2530,51 @@ const renderPreviewTab = () => {
             {farmParcels.map((parcel, index) => (
               <div
                 key={parcel.id}
-                className="border border-[#3B3B3B] rounded-md p-3 bg-[#1A1A1A]"
+                className="border border-gray-700/30 dark:border-gray-700/30 rounded-md p-3 bg-muted/50"
               >
-                <h5 className="text-gray-400 font-medium mb-2">
+                <h5 className="text-muted-foreground font-medium mb-2">
                   Parcel {index + 1}
                 </h5>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Rotation:</span>
-                    <span className="text-gray-200">
+                    <span className="text-muted-foreground">Rotation:</span>
+                    <span className="text-foreground">
                       {parcel.farmer_rotation || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Location:</span>
-                    <span className="text-gray-200">
+                    <span className="text-muted-foreground">Location:</span>
+                    <span className="text-foreground">
                       {parcel.farm_location || 'N/A'}
                     </span>
                   </div>
                   {parcel.ownership_doc && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Ownership Doc:</span>
-                      <span className="text-gray-200">
+                      <span className="text-muted-foreground">Ownership Doc:</span>
+                      <span className="text-foreground">
                         {parcel.ownership_doc}
                       </span>
                     </div>
                   )}
                   {parcel.ownership_doc_no && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Doc No:</span>
-                      <span className="text-gray-200">
+                      <span className="text-muted-foreground">Doc No:</span>
+                      <span className="text-foreground">
                         {parcel.ownership_doc_no}
                       </span>
                     </div>
                   )}
                   {parcel.ownership_type && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Ownership:</span>
-                      <span className="text-gray-200">
+                      <span className="text-muted-foreground">Ownership:</span>
+                      <span className="text-foreground">
                         {parcel.ownership_type}
                       </span>
                     </div>
                   )}
                   {parcel.ancestral_domain && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Ancestral Domain:</span>
+                      <span className="text-muted-foreground">Ancestral Domain:</span>
                       <span className="capitalize">
                         {parcel.ancestral_domain}
                       </span>
@@ -2582,7 +2582,7 @@ const renderPreviewTab = () => {
                   )}
                   {parcel.agrarian_reform && (
                     <div className="flex justify-between">
-                      <span className="text-gray-400">Agrarian Reform:</span>
+                      <span className="text-muted-foreground">Agrarian Reform:</span>
                       <span className="capitalize">
                         {parcel.agrarian_reform}
                       </span>
@@ -2598,7 +2598,7 @@ const renderPreviewTab = () => {
       {/* Parcel Crop / Commodity Details */}
       {parcelInfo.length > 0 && parcelInfo.some((p) => p.crop_commodity) && (
         <div>
-          <h5 className="text-gray-400 text-sm mb-2">
+          <h5 className="text-muted-foreground text-sm mb-2">
             Parcel Crop / Commodity Details
           </h5>
           <div className="flex flex-wrap gap-2">
@@ -2639,7 +2639,7 @@ const renderPreviewTab = () => {
       {/* No info message */}
       {(!farmParcels.length ||
         !parcelInfo.some((p) => p.crop_commodity)) && (
-        <span className="text-gray-400 text-sm">
+        <span className="text-muted-foreground text-sm">
           No farm parcel information added
         </span>
       )}
@@ -2650,15 +2650,15 @@ const renderPreviewTab = () => {
 
 {/* Fishing Activities (for fisherfolk) */}
 {registryType === 'fisherfolk' && (
-  <div className="border-t border-[#3B3B3B] pt-4">
-    <h4 className="text-gray-400 font-medium mb-2">Fishing Activities</h4>
+  <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+    <h4 className="text-muted-foreground font-medium mb-2">Fishing Activities</h4>
     <div className="flex flex-wrap gap-2">
       {fishingActivities.length > 0 ? (
         fishingActivities.map((item, index) => (
           item.activity && <Badge key={index} className="bg-blue-600/20 text-blue-400">{item.activity}</Badge>
         ))
       ) : (
-        <span className="text-gray-400 text-sm">No activities added</span>
+        <span className="text-muted-foreground text-sm">No activities added</span>
       )}
     </div>
   </div>
@@ -2666,15 +2666,15 @@ const renderPreviewTab = () => {
 
 {/* Work Types (for farmworker) */}
 {registryType === 'farmworker' && (
-  <div className="border-t border-[#3B3B3B] pt-4">
-    <h4 className="text-gray-400 font-medium mb-2">Kind of Work</h4>
+  <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+    <h4 className="text-muted-foreground font-medium mb-2">Kind of Work</h4>
     <div className="flex flex-wrap gap-2">
       {workTypes.length > 0 ? (
         workTypes.map((item, index) => (
           item.work && <Badge key={index} className="bg-yellow-600/20 text-yellow-400">{item.work}</Badge>
         ))
       ) : (
-        <span className="text-gray-400 text-sm">No work types added</span>
+        <span className="text-muted-foreground text-sm">No work types added</span>
       )}
     </div>
   </div>
@@ -2682,41 +2682,41 @@ const renderPreviewTab = () => {
 
 {/* Involvement Types (for agriyouth) */}
 {registryType === 'agriyouth' && (
-  <div className="border-t border-[#3B3B3B] pt-4">
-    <h4 className="text-gray-400 font-medium mb-2">Type of Involvement</h4>
+  <div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+    <h4 className="text-muted-foreground font-medium mb-2">Type of Involvement</h4>
     <div className="flex flex-wrap gap-2">
       {involvementTypes.length > 0 ? (
         involvementTypes.map((item, index) => (
           item.type && <Badge key={index} className="bg-purple-600/20 text-purple-400">{item.type}</Badge>
         ))
       ) : (
-        <span className="text-gray-400 text-sm">No involvement types added</span>
+        <span className="text-muted-foreground text-sm">No involvement types added</span>
       )}
     </div>
   </div>
 )}
 
           {/* Financial Information - READ FROM formInputs STATE */}
-<div className="border-t border-[#3B3B3B] pt-4">
-  <h4 className="text-gray-400 font-medium mb-2">Financial Information</h4>
+<div className="border-t border-border/10 dark:border border-gray-700/30 dark:border-gray-700/30 dark:border border-gray-700/30 dark:border-gray-700/30/20 dark:border border-gray-700/30 dark:border-gray-700/30 pt-4">
+  <h4 className="text-muted-foreground font-medium mb-2">Financial Information</h4>
   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
     <div className="flex">
-      <span className="text-gray-400 w-36">TIN Number:</span>
-      <span className="text-gray-200">{formInputs.tin_number || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">TIN Number:</span>
+      <span className="text-foreground">{formInputs.tin_number || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Source of Funds:</span>
-      <span className="text-gray-200 capitalize">{formInputs.source_of_funds || 'Not provided'}</span>
+      <span className="text-muted-foreground w-36">Source of Funds:</span>
+      <span className="text-foreground capitalize">{formInputs.source_of_funds || 'Not provided'}</span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Farming Income:</span>
-      <span className="text-gray-200">
+      <span className="text-muted-foreground w-36">Farming Income:</span>
+      <span className="text-foreground">
         {formInputs.income_farming ? `₱ ${parseFloat(formInputs.income_farming).toLocaleString('en-PH', {minimumFractionDigits: 2})}` : 'Not provided'}
       </span>
     </div>
     <div className="flex">
-      <span className="text-gray-400 w-36">Non-Farming Income:</span>
-      <span className="text-gray-200">
+      <span className="text-muted-foreground w-36">Non-Farming Income:</span>
+      <span className="text-foreground">
         {formInputs.income_non_farming ? `₱ ${parseFloat(formInputs.income_non_farming).toLocaleString('en-PH', {minimumFractionDigits: 2})}` : 'Not provided'}
       </span>
     </div>
@@ -2733,11 +2733,11 @@ const renderPreviewTab = () => {
 
   const renderSuccessModal = () => (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-[#252525] border border-[#3B3B3B] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl transform transition-all duration-300 scale-100">
+      <div className="bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl transform transition-all duration-300 scale-100">
         <div className="flex flex-col items-center text-center">
           <CheckCircle className="h-12 w-12 text-blue-600 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-200 mb-2">Registration Successful!</h3>
-          <p className="text-gray-400 mb-6">Your registration has been successfully submitted. You will receive a confirmation soon.</p>
+          <h3 className="text-xl font-semibold text-foreground mb-2">Registration Successful!</h3>
+          <p className="text-muted-foreground mb-6">Your registration has been successfully submitted. You will receive a confirmation soon.</p>
           <Button 
             onClick={closeModal}
             className="bg-blue-600 hover:bg-blue-600/80 text-blue-600-foreground px-6 py-2 rounded-md"
@@ -2779,12 +2779,12 @@ const renderPreviewTab = () => {
     <div className="p-6 space-y-6">
       {renderRegistrySelector()}
       
-      <Card className="bg-[#252525] border-0 shadow-md">
+      <Card className="bg-card border border-gray-700/30 dark:border-gray-700/30 shadow-md">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-gray-200 text-xl">Register New RSBSA - {registryType.charAt(0).toUpperCase() + registryType.slice(1)}</CardTitle>
-              <CardDescription className="text-gray-400">Fill in the details to register a new {registryType}</CardDescription>
+              <CardTitle className="text-foreground text-xl">Register New RSBSA - {registryType.charAt(0).toUpperCase() + registryType.slice(1)}</CardTitle>
+              <CardDescription className="text-muted-foreground">Fill in the details to register a new {registryType}</CardDescription>
             </div>
             <Button
               type="button"
@@ -2798,20 +2798,20 @@ const renderPreviewTab = () => {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-5 bg-[#1A1A1A] mb-6">
-              <TabsTrigger value="personal" className="data-[state=active]:bg-[#252525] data-[state=active]:text-gray-200 text-gray-400">
+            <TabsList className="grid grid-cols-5 bg-muted/20 dark:bg-muted/5 mb-6 gap-2 p-1.5 rounded-lg">
+              <TabsTrigger value="personal" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-muted/30 text-muted-foreground transition-all font-medium">
                 Personal Info
               </TabsTrigger>
-              <TabsTrigger value="address" className="data-[state=active]:bg-[#252525] data-[state=active]:text-gray-200 text-gray-400">
+              <TabsTrigger value="address" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-muted/30 text-muted-foreground transition-all font-medium">
                 Address
               </TabsTrigger>
-              <TabsTrigger value="data" className="data-[state=active]:bg-[#252525] data-[state=active]:text-gray-200 text-gray-400">
+              <TabsTrigger value="data" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-muted/30 text-muted-foreground transition-all font-medium">
                 {getDataTabLabel()}
               </TabsTrigger>
-              <TabsTrigger value="financial" className="data-[state=active]:bg-[#252525] data-[state=active]:text-gray-200 text-gray-400">
+              <TabsTrigger value="financial" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-muted/30 text-muted-foreground transition-all font-medium">
                 Financial
               </TabsTrigger>
-              <TabsTrigger value="preview" className="data-[state=active]:bg-[#252525] data-[state=active]:text-gray-200 text-gray-400">
+              <TabsTrigger value="preview" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-md data-[state=inactive]:bg-transparent data-[state=inactive]:hover:bg-muted/30 text-muted-foreground transition-all font-medium">
                 Preview
               </TabsTrigger>
             </TabsList>
@@ -2834,7 +2834,7 @@ const renderPreviewTab = () => {
                 <Button 
                   onClick={() => setActiveTab('personal')}
                   variant="outline" 
-                  className="border-[#3B3B3B] bg-transparent hover:bg-[#1A1A1A] text-gray-400 px-6 py-2 rounded-md"
+                  className="border border-gray-700/30 dark:border-gray-700/30 bg-transparent hover:bg-muted/50 text-muted-foreground px-6 py-2 rounded-md"
                 >
                   <i className="fas fa-arrow-left mr-2"></i> Previous
                 </Button>
@@ -2853,7 +2853,7 @@ const renderPreviewTab = () => {
                 <Button 
                   onClick={() => setActiveTab('address')}
                   variant="outline" 
-                  className="border-[#3B3B3B] bg-transparent hover:bg-[#1A1A1A] text-gray-400 px-6 py-2 rounded-md"
+                  className="border border-gray-700/30 dark:border-gray-700/30 bg-transparent hover:bg-muted/50 text-muted-foreground px-6 py-2 rounded-md"
                 >
                   <i className="fas fa-arrow-left mr-2"></i> Previous
                 </Button>
@@ -2872,7 +2872,7 @@ const renderPreviewTab = () => {
                 <Button 
                   onClick={() => setActiveTab('data')}
                   variant="outline" 
-                  className="border-[#3B3B3B] bg-transparent hover:bg-[#1A1A1A] text-gray-400 px-6 py-2 rounded-md"
+                  className="border border-gray-700/30 dark:border-gray-700/30 bg-transparent hover:bg-muted/50 text-muted-foreground px-6 py-2 rounded-md"
                 >
                   <i className="fas fa-arrow-left mr-2"></i> Previous
                 </Button>
@@ -2891,7 +2891,7 @@ const renderPreviewTab = () => {
                 <Button 
                   onClick={() => setActiveTab('financial')}
                   variant="outline" 
-                  className="border-[#3B3B3B] bg-transparent hover:bg-[#1A1A1A] text-gray-400 px-6 py-2 rounded-md"
+                  className="border border-gray-700/30 dark:border-gray-700/30 bg-transparent hover:bg-muted/50 text-muted-foreground px-6 py-2 rounded-md"
                 >
                   <i className="fas fa-arrow-left mr-2"></i> Previous
                 </Button>
@@ -2903,7 +2903,7 @@ const renderPreviewTab = () => {
                   )}
                 <Button 
   onClick={handleSubmit}
-  className="bg-blue-600/20 hover:bg-blue-600/80 text-gray-200 px-6 py-2 rounded-md"
+  className="bg-blue-600/20 hover:bg-blue-600/80 text-foreground px-6 py-2 rounded-md"
   disabled={isSubmitting}
 >
   {isSubmitting ? (

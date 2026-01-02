@@ -163,7 +163,7 @@ const handlePermanentDelete = async () => {
   const getActionBadgeColor = (action) => {
     const colors = {
       'Log In': 'bg-blue-900/50 text-blue-300',
-      'Log Out': 'bg-gray-900/50 text-gray-300',
+      'Log Out': 'bg-gray-900/50 text-muted-foreground',
       'Add Registrant': 'bg-green-900/50 text-green-300',
       'Update': 'bg-yellow-900/50 text-yellow-300',
       'Delete': 'bg-red-900/50 text-red-300',
@@ -172,7 +172,7 @@ const handlePermanentDelete = async () => {
       'Export': 'bg-pink-900/50 text-pink-300',
       'Permanent Delete': 'bg-red-900/50 text-red-400'
     };
-    return colors[action] || 'bg-gray-900/50 text-gray-300';
+    return colors[action] || 'bg-gray-900/50 text-muted-foreground';
   };
 
   const formatDateTime = (dateString) => {
@@ -328,7 +328,7 @@ const handlePermanentDelete = async () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-[#333333]">
+      <div className="flex gap-2 border-b border-border">
         <Button
           variant={activeTab === 'activity' ? 'default' : 'ghost'}
           onClick={() => {
@@ -336,8 +336,8 @@ const handlePermanentDelete = async () => {
             setCurrentPage(1);
           }}
           className={activeTab === 'activity' 
-            ? 'bg-teal-600 hover:bg-teal-700 text-white font-semibold border-b-2 border-teal-400 rounded-b-none' 
-            : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a] border-b-2 border-transparent rounded-b-none'}
+            ? 'bg-teal-600 hover:bg-teal-700 text-foreground font-semibold border-b-2 border-teal-400 rounded-b-none' 
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 border-b-2 border-transparent rounded-b-none'}
         >
           <i className="fas fa-history mr-2"></i> Activity Logs
           <Badge className={activeTab === 'activity' ? 'ml-2 bg-teal-800 text-teal-200' : 'ml-2 bg-blue-900/50 text-blue-300'}>{activityLogs.length}</Badge>
@@ -349,8 +349,8 @@ const handlePermanentDelete = async () => {
             setCurrentPage(1);
           }}
           className={activeTab === 'deleted' 
-            ? 'bg-teal-600 hover:bg-teal-700 text-white font-semibold border-b-2 border-teal-400 rounded-b-none' 
-            : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a] border-b-2 border-transparent rounded-b-none'}
+            ? 'bg-teal-600 hover:bg-teal-700 text-foreground font-semibold border-b-2 border-teal-400 rounded-b-none' 
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 border-b-2 border-transparent rounded-b-none'}
         >
           <i className="fas fa-trash-restore mr-2"></i> Deleted Records
           <Badge className={activeTab === 'deleted' ? 'ml-2 bg-teal-800 text-teal-200' : 'ml-2 bg-red-900/50 text-red-300'}>{deletedRecords.length}</Badge>
@@ -362,8 +362,8 @@ const handlePermanentDelete = async () => {
             setCurrentPage(1);
           }}
           className={activeTab === 'archives' 
-            ? 'bg-teal-600 hover:bg-teal-700 text-white font-semibold border-b-2 border-teal-400 rounded-b-none' 
-            : 'text-gray-400 hover:text-white hover:bg-[#2a2a2a] border-b-2 border-transparent rounded-b-none'}
+            ? 'bg-teal-600 hover:bg-teal-700 text-foreground font-semibold border-b-2 border-teal-400 rounded-b-none' 
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 border-b-2 border-transparent rounded-b-none'}
         >
           <i className="fas fa-archive mr-2"></i> Log Archives
           <Badge className={activeTab === 'archives' ? 'ml-2 bg-teal-800 text-teal-200' : 'ml-2 bg-purple-900/50 text-purple-300'}>{logArchives.length}</Badge>
@@ -371,17 +371,17 @@ const handlePermanentDelete = async () => {
       </div>
 
       {/* Search and Filter */}
-      <Card className="bg-[#1e1e1e] border-0">
+      <Card className="bg-card border-0">
         <CardContent className="p-4">
           <div className="flex gap-4 items-center">
             <div className="flex-1">
               <div className="relative">
-                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"></i>
                 <Input
                   placeholder="Search by user, action, or target..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-[#252525] border-[#3B3B3B] text-gray-200"
+                  className="pl-10 bg-muted border-border text-foreground"
                 />
               </div>
             </div>
@@ -391,49 +391,49 @@ const handlePermanentDelete = async () => {
 
       {/* Activity Logs Tab */}
       {activeTab === 'activity' && (
-        <Card className="bg-[#1e1e1e] border-0">
+        <Card className="bg-card border-0">
           <CardHeader>
-            <CardTitle className="text-white">Recent Activity</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className="text-foreground">Recent Activity</CardTitle>
+            <CardDescription className="text-muted-foreground">
               System-wide activity logs and user actions
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ScrollArea className="h-[600px]">
               <Table>
-                <TableHeader className="bg-[#252525]">
+                <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead className="text-gray-300">Time</TableHead>
-                    <TableHead className="text-gray-300">User</TableHead>
-                    <TableHead className="text-gray-300">Action</TableHead>
-                    <TableHead className="text-gray-300">Target</TableHead>
-                    <TableHead className="text-gray-300">IP Address</TableHead>
+                    <TableHead className="text-muted-foreground">Time</TableHead>
+                    <TableHead className="text-muted-foreground">User</TableHead>
+                    <TableHead className="text-muted-foreground">Action</TableHead>
+                    <TableHead className="text-muted-foreground">Target</TableHead>
+                    <TableHead className="text-muted-foreground">IP Address</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentActivityLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-400 py-8">
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         No activity logs found
                       </TableCell>
                     </TableRow>
                   ) : (
                     currentActivityLogs.map((log) => (
-                      <TableRow key={log.id} className="border-t border-[#333333] hover:bg-[#2a2a2a]">
-                        <TableCell className="text-gray-400">
+                      <TableRow key={log.id} className="border-t dark:border-border/10 border-border hover:bg-muted/80">
+                        <TableCell className="text-muted-foreground">
                           <div className="flex flex-col">
                             <span className="text-sm">{formatDateTime(log.created_at)}</span>
-                            <span className="text-xs text-gray-500">{formatTimeAgo(log.created_at)}</span>
+                            <span className="text-xs text-muted-foreground/70">{formatTimeAgo(log.created_at)}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-gray-200">{log.user_name}</TableCell>
+                        <TableCell className="text-foreground">{log.user_name}</TableCell>
                         <TableCell>
                           <Badge className={getActionBadgeColor(log.action)}>
                             {log.action}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-gray-300">{log.target}</TableCell>
-                        <TableCell className="text-gray-400 font-mono text-sm">
+                        <TableCell className="text-muted-foreground">{log.target}</TableCell>
+                        <TableCell className="text-muted-foreground font-mono text-sm">
                           {log.ip_address || 'N/A'}
                         </TableCell>
                       </TableRow>
@@ -445,8 +445,8 @@ const handlePermanentDelete = async () => {
 
             {/* Pagination */}
             {totalActivityPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#333333]">
-                <p className="text-sm text-gray-400">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t dark:border-border/10 border-border">
+                <p className="text-sm text-muted-foreground">
                   Showing {indexOfFirstActivity + 1} to {Math.min(indexOfLastActivity, filteredActivityLogs.length)} of {filteredActivityLogs.length} records
                 </p>
                 <div className="flex gap-2">
@@ -455,11 +455,11 @@ const handlePermanentDelete = async () => {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                    className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                   >
                     <i className="fas fa-chevron-left"></i>
                   </Button>
-                  <span className="px-4 py-2 text-gray-300">
+                  <span className="px-4 py-2 text-muted-foreground">
                     Page {currentPage} of {totalActivityPages}
                   </span>
                   <Button
@@ -467,7 +467,7 @@ const handlePermanentDelete = async () => {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalActivityPages))}
                     disabled={currentPage === totalActivityPages}
-                    className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                    className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                   >
                     <i className="fas fa-chevron-right"></i>
                   </Button>
@@ -480,12 +480,12 @@ const handlePermanentDelete = async () => {
 
       {/* Deleted Records Tab */}
       {activeTab === 'deleted' && (
-        <Card className="bg-[#1e1e1e] border-0">
+        <Card className="bg-card border-0">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-white">Deleted Registrants</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-foreground">Deleted Registrants</CardTitle>
+                <CardDescription className="text-muted-foreground">
                   Manage and restore deleted records
                 </CardDescription>
               </div>
@@ -503,21 +503,21 @@ const handlePermanentDelete = async () => {
           <CardContent>
             <ScrollArea className="h-[600px]">
               <Table>
-                <TableHeader className="bg-[#252525]">
+                <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead className="text-gray-300">Reference No.</TableHead>
-                    <TableHead className="text-gray-300">Name</TableHead>
-                    <TableHead className="text-gray-300">Registry</TableHead>
-                    <TableHead className="text-gray-300">Address</TableHead>
-                    <TableHead className="text-gray-300">Deleted At</TableHead>
-                    <TableHead className="text-gray-300">Reason</TableHead>
-                    <TableHead className="text-right text-gray-300">Actions</TableHead>
+                    <TableHead className="text-muted-foreground">Reference No.</TableHead>
+                    <TableHead className="text-muted-foreground">Name</TableHead>
+                    <TableHead className="text-muted-foreground">Registry</TableHead>
+                    <TableHead className="text-muted-foreground">Address</TableHead>
+                    <TableHead className="text-muted-foreground">Deleted At</TableHead>
+                    <TableHead className="text-muted-foreground">Reason</TableHead>
+                    <TableHead className="text-right text-muted-foreground">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentDeletedRecords.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         <i className="fas fa-check-circle text-3xl mb-2"></i>
                         <p>No deleted records found</p>
                       </TableCell>
@@ -526,8 +526,8 @@ const handlePermanentDelete = async () => {
                     currentDeletedRecords.map((record) => {
                       const address = record.addresses?.[0];
                       return (
-                        <TableRow key={record.id} className="border-t border-[#333333] hover:bg-[#2a2a2a]">
-                          <TableCell className="text-gray-400 font-mono text-sm">
+                        <TableRow key={record.id} className="border-t dark:border-border/10 border-border hover:bg-muted/80">
+                          <TableCell className="text-muted-foreground font-mono text-sm">
                             {record.reference_no || 'N/A'}
                           </TableCell>
                           <TableCell className="text-foreground">
@@ -538,13 +538,13 @@ const handlePermanentDelete = async () => {
                               {record.registry === 'farmer' ? 'Farmer' : 'Fisherfolk'}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-gray-400 text-sm">
+                          <TableCell className="text-muted-foreground text-sm">
                             {address ? `${address.purok}, ${address.barangay}` : 'N/A'}
                           </TableCell>
-                          <TableCell className="text-gray-400 text-sm">
+                          <TableCell className="text-muted-foreground text-sm">
                             {formatDateTime(record.deleted_at)}
                           </TableCell>
-                          <TableCell className="text-gray-400 text-sm">
+                          <TableCell className="text-muted-foreground text-sm">
                             {record.delete_reason || 'No reason provided'}
                           </TableCell>
                           <TableCell className="text-right">
@@ -556,7 +556,7 @@ const handlePermanentDelete = async () => {
                                   setSelectedRecord(record);
                                   setShowViewModal(true);
                                 }}
-                                className="h-8 border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                                className="h-8 border-border bg-transparent hover:bg-muted text-muted-foreground"
                               >
                                 <i className="fas fa-eye mr-1 text-xs"></i> View
                               </Button>
@@ -594,8 +594,8 @@ const handlePermanentDelete = async () => {
 
             {/* Pagination */}
             {totalDeletedPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#333333]">
-                <p className="text-sm text-gray-400">
+              <div className="flex items-center justify-between mt-4 pt-4 border-t dark:border-border/10 border-border">
+                <p className="text-sm text-muted-foreground">
                   Showing {indexOfFirstDeleted + 1} to {Math.min(indexOfLastDeleted, filteredDeletedRecords.length)} of {filteredDeletedRecords.length} records
                 </p>
                 <div className="flex gap-2">
@@ -604,11 +604,11 @@ const handlePermanentDelete = async () => {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                    className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                   >
                     <i className="fas fa-chevron-left"></i>
                   </Button>
-                  <span className="px-4 py-2 text-gray-300">
+                  <span className="px-4 py-2 text-muted-foreground">
                     Page {currentPage} of {totalDeletedPages}
                   </span>
                   <Button
@@ -616,7 +616,7 @@ const handlePermanentDelete = async () => {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalDeletedPages))}
                     disabled={currentPage === totalDeletedPages}
-                    className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                    className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                   >
                     <i className="fas fa-chevron-right"></i>
                   </Button>
@@ -628,10 +628,10 @@ const handlePermanentDelete = async () => {
       )}
       {/* Log Archives Tab */}
       {activeTab === 'archives' && (
-        <Card className="bg-[#1e1e1e] border-0">
+        <Card className="bg-card border-0">
           <CardHeader>
-            <CardTitle className="text-white">Log Archives</CardTitle>
-            <CardDescription className="text-gray-400">
+            <CardTitle className="text-foreground">Log Archives</CardTitle>
+            <CardDescription className="text-muted-foreground">
               Archived activity logs grouped by date (last 14 days)
             </CardDescription>
           </CardHeader>
@@ -639,20 +639,20 @@ const handlePermanentDelete = async () => {
             <ScrollArea className="h-[600px]">
               <div className="space-y-4">
                 {logArchives.length === 0 ? (
-                  <div className="text-center text-gray-400 py-8">
+                  <div className="text-center text-muted-foreground py-8">
                     <i className="fas fa-archive text-3xl mb-2"></i>
                     <p>No archived logs found</p>
                   </div>
                 ) : (
                   logArchives.map((archive) => (
-                    <Card key={archive.id} className="bg-[#252525] border-[#333333]">
+                    <Card key={archive.id} className="bg-muted border-border">
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <i className="fas fa-archive text-purple-400"></i>
                             <div>
-                              <h3 className="text-white font-semibold">{formatDate(archive.archive_date)}</h3>
-                              <p className="text-sm text-gray-400">
+                              <h3 className="text-foreground font-semibold">{formatDate(archive.archive_date)}</h3>
+                              <p className="text-sm text-muted-foreground">
                                 {archive.total_logs} log{archive.total_logs !== 1 ? 's' : ''} archived
                               </p>
                             </div>
@@ -670,7 +670,7 @@ const handlePermanentDelete = async () => {
                               variant="outline"
                               size="sm"
                               onClick={() => setExpandedArchive(expandedArchive === archive.id ? null : archive.id)}
-                              className="h-8 border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                              className="h-8 border-border bg-transparent hover:bg-muted text-muted-foreground"
                             >
                               <i className={`fas fa-chevron-${expandedArchive === archive.id ? 'up' : 'down'} mr-1 text-xs`}></i>
                               {expandedArchive === archive.id ? 'Collapse' : 'Expand'}
@@ -680,31 +680,31 @@ const handlePermanentDelete = async () => {
                       </CardHeader>
                       {expandedArchive === archive.id && (
                         <CardContent className="pt-0">
-                          <div className="border-t border-[#333333] pt-4">
+                          <div className="border-t dark:border-border/10 border-border pt-4">
                             <Table>
-                              <TableHeader className="bg-[#1e1e1e]">
+                              <TableHeader className="bg-card">
                                 <TableRow>
-                                  <TableHead className="text-gray-300">Time</TableHead>
-                                  <TableHead className="text-gray-300">User</TableHead>
-                                  <TableHead className="text-gray-300">Action</TableHead>
-                                  <TableHead className="text-gray-300">Target</TableHead>
-                                  <TableHead className="text-gray-300">IP Address</TableHead>
+                                  <TableHead className="text-muted-foreground">Time</TableHead>
+                                  <TableHead className="text-muted-foreground">User</TableHead>
+                                  <TableHead className="text-muted-foreground">Action</TableHead>
+                                  <TableHead className="text-muted-foreground">Target</TableHead>
+                                  <TableHead className="text-muted-foreground">IP Address</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
                                 {archive.archive_data.map((log, index) => (
-                                  <TableRow key={index} className="border-t border-[#333333] hover:bg-[#2a2a2a]">
-                                    <TableCell className="text-gray-400 text-sm">
+                                  <TableRow key={index} className="border-t dark:border-border/10 border-border hover:bg-muted/80">
+                                    <TableCell className="text-muted-foreground text-sm">
                                       {formatDateTime(log.created_at)}
                                     </TableCell>
-                                    <TableCell className="text-gray-200">{log.user_name}</TableCell>
+                                    <TableCell className="text-foreground">{log.user_name}</TableCell>
                                     <TableCell>
                                       <Badge className={getActionBadgeColor(log.action)}>
                                         {log.action}
                                       </Badge>
                                     </TableCell>
-                                    <TableCell className="text-gray-300">{log.target}</TableCell>
-                                    <TableCell className="text-gray-400 font-mono text-sm">
+                                    <TableCell className="text-muted-foreground">{log.target}</TableCell>
+                                    <TableCell className="text-muted-foreground font-mono text-sm">
                                       {log.ip_address || 'N/A'}
                                     </TableCell>
                                   </TableRow>
@@ -742,11 +742,11 @@ const handlePermanentDelete = async () => {
             <CardContent className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-gray-400 text-sm">Reference Number</label>
+                  <label className="text-muted-foreground text-sm">Reference Number</label>
                   <p className="text-foreground font-mono">{selectedRecord.reference_no || 'N/A'}</p>
                 </div>
                 <div>
-                  <label className="text-gray-400 text-sm">Type</label>
+                  <label className="text-muted-foreground text-sm">Type</label>
                   <p>
                     <Badge className={selectedRecord.registry === 'farmer' ? 'bg-green-900/50 text-green-300' : 'bg-blue-900/50 text-blue-300'}>
                       {selectedRecord.registry === 'farmer' ? 'Farmer' : 'Fisherfolk'}
@@ -754,15 +754,15 @@ const handlePermanentDelete = async () => {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-400 text-sm">Full Name</label>
+                  <label className="text-muted-foreground text-sm">Full Name</label>
                   <p className="text-foreground">{selectedRecord.first_name} {selectedRecord.middle_name} {selectedRecord.surname}</p>
                 </div>
                 <div>
-                  <label className="text-gray-400 text-sm">Contact Number</label>
+                  <label className="text-muted-foreground text-sm">Contact Number</label>
                   <p className="text-foreground">{selectedRecord.mobile_number || 'N/A'}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="text-gray-400 text-sm">Address</label>
+                  <label className="text-muted-foreground text-sm">Address</label>
                   <p className="text-foreground">
                     {selectedRecord.addresses?.[0] 
                       ? `${selectedRecord.addresses[0].purok}, ${selectedRecord.addresses[0].barangay}, ${selectedRecord.addresses[0].municipality_city}`
@@ -771,23 +771,23 @@ const handlePermanentDelete = async () => {
                   </p>
                 </div>
                 <div>
-                  <label className="text-gray-400 text-sm">Deleted On</label>
+                  <label className="text-muted-foreground text-sm">Deleted On</label>
                   <p className="text-foreground">{formatDateTime(selectedRecord.deleted_at)}</p>
                 </div>
                 <div>
-                  <label className="text-gray-400 text-sm">Time Since Deletion</label>
+                  <label className="text-muted-foreground text-sm">Time Since Deletion</label>
                   <p className="text-foreground">{formatTimeAgo(selectedRecord.deleted_at)}</p>
                 </div>
                 <div className="col-span-2">
-                  <label className="text-gray-400 text-sm">Deletion Reason</label>
+                  <label className="text-muted-foreground text-sm">Deletion Reason</label>
                   <p className="text-foreground">{selectedRecord.delete_reason || 'No reason provided'}</p>
                 </div>
               </div>
-              <div className="flex gap-2 justify-end pt-4 border-t border-border">
+              <div className="flex gap-2 justify-end pt-4 border-t dark:border-border/10 border-border">
                 <Button
                   variant="outline"
                   onClick={() => setShowViewModal(false)}
-                  className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                  className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                 >
                   Close
                 </Button>
@@ -809,9 +809,9 @@ const handlePermanentDelete = async () => {
                 Are you sure you want to restore this record?
               </p>
               <div className="bg-muted p-4 rounded-md">
-                <p className="text-sm text-gray-400">Reference No.</p>
+                <p className="text-sm text-muted-foreground">Reference No.</p>
                 <p className="text-foreground font-mono">{selectedRecord.reference_no || 'N/A'}</p>
-                <p className="text-sm text-gray-400 mt-2">Name</p>
+                <p className="text-sm text-muted-foreground mt-2">Name</p>
                 <p className="text-foreground">{selectedRecord.first_name} {selectedRecord.surname}</p>
               </div>
               <div className="flex gap-2 justify-end">
@@ -824,7 +824,7 @@ const handlePermanentDelete = async () => {
                 </Button>
                 <Button
                   onClick={handleRestore}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-600 hover:bg-green-700 text-foreground"
                 >
                   <i className="fas fa-undo mr-2"></i> Restore
                 </Button>
@@ -839,7 +839,7 @@ const handlePermanentDelete = async () => {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
           <Card className="bg-card border shadow-xl max-w-md w-full">
             <CardHeader className="border-b border-border">
-              <CardTitle className="text-white text-red-400">
+              <CardTitle className="text-foreground text-red-400">
                 <i className="fas fa-exclamation-triangle mr-2"></i>
                 Permanent Delete
               </CardTitle>
@@ -849,9 +849,9 @@ const handlePermanentDelete = async () => {
                 <strong className="text-red-400">Warning:</strong> This action cannot be undone! The record will be permanently deleted from the database.
               </p>
               <div className="bg-muted p-4 rounded-md border border-red-900/50">
-                <p className="text-sm text-gray-400">Reference No.</p>
+                <p className="text-sm text-muted-foreground">Reference No.</p>
                 <p className="text-foreground font-mono">{selectedRecord.reference_no || 'N/A'}</p>
-                <p className="text-sm text-gray-400 mt-2">Name</p>
+                <p className="text-sm text-muted-foreground mt-2">Name</p>
                 <p className="text-foreground">{selectedRecord.first_name} {selectedRecord.surname}</p>
               </div>
               <div className="flex gap-2 justify-end">
@@ -864,7 +864,7 @@ const handlePermanentDelete = async () => {
                 </Button>
                 <Button
                   onClick={handlePermanentDelete}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-foreground"
                 >
                   <i className="fas fa-trash-alt mr-2"></i> Delete Permanently
                 </Button>
@@ -877,34 +877,34 @@ const handlePermanentDelete = async () => {
       {/* Delete All Modal */}
       {showDeleteAllModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md bg-[#1e1e1e] border border-red-700">
+          <Card className="w-full max-w-md bg-card border border-red-700">
             <CardHeader>
               <CardTitle className="text-red-400 flex items-center gap-2">
                 <i className="fas fa-exclamation-triangle"></i>
                 Delete All Records
               </CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardDescription className="text-muted-foreground">
                 This action cannot be undone
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-gray-300 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Are you sure you want to permanently delete <span className="font-bold text-red-400">{deletedRecords.length}</span> deleted record{deletedRecords.length !== 1 ? 's' : ''}?
               </p>
-              <p className="text-gray-400 text-sm mb-4">
+              <p className="text-muted-foreground text-sm mb-4">
                 This will permanently remove all deleted registrants from the database. This action cannot be undone.
               </p>
               <div className="flex gap-2 justify-end">
                 <Button
                   variant="outline"
                   onClick={() => setShowDeleteAllModal(false)}
-                  className="border-[#444444] bg-transparent hover:bg-[#333333] text-gray-300"
+                  className="border-border bg-transparent hover:bg-muted text-muted-foreground"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleDeleteAll}
-                  className="bg-red-600 hover:bg-red-700 text-white"
+                  className="bg-red-600 hover:bg-red-700 text-foreground"
                 >
                   <i className="fas fa-trash mr-2"></i>
                   Delete All Permanently
@@ -927,19 +927,19 @@ const handlePermanentDelete = async () => {
         </div>
         
         {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-foreground mb-2">
           {modalTitle}
         </h3>
         
         {/* Message */}
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <p className="text-gray-600 dark:text-muted-foreground mb-6">
           {modalMessage}
         </p>
         
         {/* Close Button */}
         <Button
           onClick={() => setShowSuccessModal(false)}
-          className="w-full bg-green-600 hover:bg-green-700 text-white"
+          className="w-full bg-green-600 hover:bg-green-700 text-foreground"
         >
           OK
         </Button>
@@ -961,19 +961,19 @@ const handlePermanentDelete = async () => {
         </div>
         
         {/* Title */}
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-foreground mb-2">
           {modalTitle}
         </h3>
         
         {/* Message */}
-        <p className="text-gray-600 dark:text-gray-300 mb-6">
+        <p className="text-gray-600 dark:text-muted-foreground mb-6">
           {modalMessage}
         </p>
         
         {/* Close Button */}
         <Button
           onClick={() => setShowErrorModal(false)}
-          className="w-full bg-red-600 hover:bg-red-700 text-white"
+          className="w-full bg-red-600 hover:bg-red-700 text-foreground"
         >
           Close
         </Button>
