@@ -9,10 +9,11 @@ import ImportPage from "../components/ImportPage";
 import ExportPage from "../components/ExportPage";
 import HistoryPage from "../components/HistoryPage";
 import HelpPage from "../components/HelpPage";
-import Settings from "@/components/Settings";
-import SetFarmLocationPage from "../components/SetFarmLocationPage";
 
-const AppRoutes = ({ user }) => {
+import SetFarmLocationPage from "../components/SetFarmLocationPage";
+import ProfilePage from "../components/ProfilePage";
+
+const AppRoutes = ({ user, setUser }) => {
   // Get user role for route protection
   const userRole = user?.role?.toLowerCase().trim() || "user";
 
@@ -118,15 +119,26 @@ const AppRoutes = ({ user }) => {
           </ProtectedRoute>
         }
       />
-      {/* Help - All users */}
+      {/* Settings - All users (Aliased to Profile) */}
       <Route
         path="/settings"
         element={
           <ProtectedRoute allowedRoles={["admin", "moderator", "user", "agritech"]}>
-            <Settings user={user} />
+            <ProfilePage user={user} setUser={setUser} />
           </ProtectedRoute>
         }
       />
+
+      {/* Profile - All users */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute allowedRoles={["admin", "moderator", "user", "agritech"]}>
+            <ProfilePage user={user} setUser={setUser} />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Help - All users */}
       <Route
         path="/help"
