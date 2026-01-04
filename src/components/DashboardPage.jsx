@@ -36,6 +36,10 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
     productionByArea: {},
     detailedProductionData: {},
     topPuroks: [],
+    cropsDataByPurok: {},
+    animalsDataByPurok: {},
+    cropDensityByArea: {},
+    productionSummary: {},
     loading: true
   });
 
@@ -210,6 +214,275 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           .slice(0, 5)
           .map(([name, count]) => ({ name, count }));
         
+        // Calculate crops by purok and type for Top Crops Production chart
+        const cropsDataByPurok = {};
+        activeCrops.forEach(crop => {
+          const { purok } = getLocation(crop.registrant_id);
+          const cropName = crop.name || 'Other';
+          
+          if (!cropsDataByPurok[cropName]) {
+            cropsDataByPurok[cropName] = {};
+          }
+          if (!cropsDataByPurok[cropName][purok]) {
+            cropsDataByPurok[cropName][purok] = 0;
+          }
+          cropsDataByPurok[cropName][purok]++;
+        });
+        
+        // Calculate animals by purok and type for Top Animals Population chart
+        const animalsDataByPurok = {};
+        
+        // Livestock
+        activeLivestock.forEach(animal => {
+          const { purok } = getLocation(animal.registrant_id);
+          const animalName = animal.animal || 'Other';
+          
+          if (!animalsDataByPurok[animalName]) {
+            animalsDataByPurok[animalName] = {};
+          }
+          if (!animalsDataByPurok[animalName][purok]) {
+            animalsDataByPurok[animalName][purok] = 0;
+          }
+          animalsDataByPurok[animalName][purok] += (animal.head_count || 1);
+        });
+        
+        // Poultry
+        activePoultry.forEach(bird => {
+          const { purok } = getLocation(bird.registrant_id);
+          const birdName = bird.bird || 'Other';
+          
+          if (!animalsDataByPurok[birdName]) {
+            animalsDataByPurok[birdName] = {};
+          }
+          if (!animalsDataByPurok[birdName][purok]) {
+            animalsDataByPurok[birdName][purok] = 0;
+          }
+          animalsDataByPurok[birdName][purok] += (bird.head_count || 1);
+        });
+        
+        // Calculate crop density (crops per hectare) by area
+        const cropDensityByArea = {};
+        
+        // Get total farm area per barangay from registrants
+        const areaByBarangay = {};
+        registrants.forEach(r => {
+          if (r.deleted_at) return;
+          if (r.farm_parcels && r.farm_parcels.length > 0) {
+            r.farm_parcels.forEach(parcel => {
+              if (parcel.total_farm_area_ha && r.addresses && r.addresses[0]) {
+                const barangay = r.addresses[0].barangay || 'Unknown';
+                if (!areaByBarangay[barangay]) {
+                  areaByBarangay[barangay] = 0;
+                }
+                areaByBarangay[barangay] += parseFloat(parcel.total_farm_area_ha);
+              }
+            });
+          }
+        });
+        
+        // Calculate density for each barangay
+        Object.keys(productionByArea).forEach(barangay => {
+          const cropCount = productionByArea[barangay].crops;
+          const totalArea = areaByBarangay[barangay] || 0;
+          
+          if (totalArea > 0) {
+            cropDensityByArea[barangay] = {
+              cropCount,
+              totalArea: totalArea.toFixed(2),
+              density: (cropCount / totalArea).toFixed(2)
+            };
+          }
+        });
+        
+        // Calculate production summary for tables with detailed categorization
+        const productionSummary = {};
+        
+        // First, fetch parcel_infos to get farm_kind data
+        const parcelInfos = await ApiService.getAllParcelInfos();
+        
+        // Create a map for quick lookup: parcel_id -> parcel_info
+        const parcelInfoMap = {};
+        parcelInfos.forEach(info => {
+          parcelInfoMap[info.parcel_id] = info;
+        });
+        
+        // Group crops by barangay with detailed breakdown
+        activeCrops.forEach(crop => {
+          const { barangay } = getLocation(crop.registrant_id);
+          const cropName = crop.name || 'Others';
+          
+          if (!productionSummary[barangay]) {
+            productionSummary[barangay] = {
+              crops: {
+                rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
+                corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
+                others: { count: 0, area: 0 }
+              },
+              livestock: {},
+              poultry: {},
+              totalArea: 0
+            };
+          }
+          
+          // Categorize crops by type and sub-type
+          if (cropName.toLowerCase().includes('rice')) {
+            // For rice, categorize by farm type (irrigated/rainfed)
+            // We'd need to link crop to parcel_info through parcel_info_id
+            // For now, default to rainfed if not specified
+            productionSummary[barangay].crops.rice.rainfed.count++;
+          } else if (cropName.toLowerCase().includes('corn')) {
+            // Categorize by corn type (yellow/white)
+            const cornType = crop.corn_type ? crop.corn_type.toLowerCase() : 'yellow';
+            if (cornType === 'white') {
+              productionSummary[barangay].crops.corn.white.count++;
+            } else {
+              productionSummary[barangay].crops.corn.yellow.count++;
+            }
+          } else {
+            productionSummary[barangay].crops.others.count++;
+          }
+        });
+        
+        // Add farm areas and categorize by farm type
+        registrants.forEach(r => {
+          if (r.deleted_at) return;
+          if (r.farm_parcels && r.farm_parcels.length > 0 && r.addresses && r.addresses[0]) {
+            const barangay = r.addresses[0].barangay || 'Unknown';
+            
+            if (!productionSummary[barangay]) {
+              productionSummary[barangay] = {
+                crops: {
+                  rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
+                  corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
+                  others: { count: 0, area: 0 }
+                },
+                livestock: {},
+                poultry: {},
+                totalArea: 0
+              };
+            }
+            
+            r.farm_parcels.forEach(parcel => {
+              if (parcel.total_farm_area_ha) {
+                const area = parseFloat(parcel.total_farm_area_ha);
+                productionSummary[barangay].totalArea += area;
+                
+                // Get parcel info for this parcel
+                const parcelInfo = parcelInfoMap[parcel.id];
+                if (parcelInfo && parcelInfo.farm_kind) {
+                  const farmKind = parcelInfo.farm_kind.toLowerCase();
+                  
+                  // Allocate area based on farm type
+                  if (farmKind.includes('irrigated')) {
+                    productionSummary[barangay].crops.rice.irrigated.area += area;
+                  } else if (farmKind.includes('rainfed')) {
+                    productionSummary[barangay].crops.rice.rainfed.area += area;
+                  }
+                }
+              }
+            });
+          }
+        });
+        
+        // Group livestock by barangay and type
+        activeLivestock.forEach(animal => {
+          const { barangay } = getLocation(animal.registrant_id);
+          const animalType = animal.animal || 'Others';
+          
+          if (!productionSummary[barangay]) {
+            productionSummary[barangay] = {
+              crops: {
+                rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
+                corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
+                others: { count: 0, area: 0 }
+              },
+              livestock: {},
+              poultry: {},
+              totalArea: 0
+            };
+          }
+          
+          if (!productionSummary[barangay].livestock[animalType]) {
+            productionSummary[barangay].livestock[animalType] = 0;
+          }
+          productionSummary[barangay].livestock[animalType] += (animal.head_count || 1);
+        });
+        
+        // Group poultry by barangay and type
+        activePoultry.forEach(bird => {
+          const { barangay } = getLocation(bird.registrant_id);
+          const birdType = bird.bird || 'Others';
+          
+          if (!productionSummary[barangay]) {
+            productionSummary[barangay] = {
+              crops: {
+                rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
+                corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
+                others: { count: 0, area: 0 }
+              },
+              livestock: {},
+              poultry: {},
+              totalArea: 0
+            };
+          }
+          
+          if (!productionSummary[barangay].poultry[birdType]) {
+            productionSummary[barangay].poultry[birdType] = 0;
+          }
+          productionSummary[barangay].poultry[birdType] += (bird.head_count || 1);
+        });
+        
+        // Calculate production density (crops per hectare) for each category
+        Object.keys(productionSummary).forEach(barangay => {
+          const summary = productionSummary[barangay];
+          
+          // Rice densities
+          if (summary.crops.rice.irrigated.area > 0) {
+            summary.crops.rice.irrigated.density = 
+              (summary.crops.rice.irrigated.count / summary.crops.rice.irrigated.area).toFixed(2);
+          }
+          if (summary.crops.rice.rainfed.area > 0) {
+            summary.crops.rice.rainfed.density = 
+              (summary.crops.rice.rainfed.count / summary.crops.rice.rainfed.area).toFixed(2);
+          }
+          
+          // Corn densities  
+          if (summary.crops.corn.yellow.area > 0) {
+            summary.crops.corn.yellow.density = 
+              (summary.crops.corn.yellow.count / summary.crops.corn.yellow.area).toFixed(2);
+          }
+          if (summary.crops.corn.white.area > 0) {
+            summary.crops.corn.white.density = 
+              (summary.crops.corn.white.count / summary.crops.corn.white.area).toFixed(2);
+          }
+        });
+        
+        // Allocate remaining area (non-rice) to corn and others based on their proportions
+        Object.keys(productionSummary).forEach(barangay => {
+          const summary = productionSummary[barangay];
+          
+          // Calculate rice area
+          const riceArea = summary.crops.rice.irrigated.area + summary.crops.rice.rainfed.area;
+          
+          // Remaining area for corn and others
+          const remainingArea = summary.totalArea - riceArea;
+          
+          if (remainingArea > 0) {
+            // Count non-rice crops
+            const cornYellowCount = summary.crops.corn.yellow.count;
+            const cornWhiteCount = summary.crops.corn.white.count;
+            const othersCount = summary.crops.others.count;
+            const totalNonRiceCrops = cornYellowCount + cornWhiteCount + othersCount;
+            
+            if (totalNonRiceCrops > 0) {
+              // Allocate area proportionally based on crop counts
+              summary.crops.corn.yellow.area = (remainingArea * cornYellowCount / totalNonRiceCrops);
+              summary.crops.corn.white.area = (remainingArea * cornWhiteCount / totalNonRiceCrops);
+              summary.crops.others.area = (remainingArea * othersCount / totalNonRiceCrops);
+            }
+          }
+        });
+        
         setDashboardData({
           totalFarmers: farmers.length,
           totalFisherfolks: fisherfolks.length,
@@ -225,6 +498,10 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           productionByArea,
           detailedProductionData,
           topPuroks,
+          cropsDataByPurok,
+          animalsDataByPurok,
+          cropDensityByArea,
+          productionSummary,
           loading: false
         });
       } catch (error) {
@@ -528,8 +805,8 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
     
     // Prepare data from productionByArea
     const areas = Object.keys(dashboardData.productionByArea);
-    const cropsData = areas.map(area => dashboardData.productionByArea[area].crops);
-    const animalsData = areas.map(area => dashboardData.productionByArea[area].animals);
+    const cropsCounts = areas.map(area => dashboardData.productionByArea[area].crops);
+    const animalsCounts = areas.map(area => dashboardData.productionByArea[area].animals);
     
     const productionOption = {
       animation: true,
@@ -565,13 +842,13 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         {
           name: "Crops",
           type: "bar",
-          data: cropsData.length > 0 ? cropsData : [0],
+          data: cropsCounts.length > 0 ? cropsCounts : [0],
           itemStyle: { color: "#10b981" },
         },
         {
           name: "Animals",
           type: "bar",
-          data: animalsData.length > 0 ? animalsData : [0],
+          data: animalsCounts.length > 0 ? animalsCounts : [0],
           itemStyle: { color: "#f59e0b" },
         },
       ],
@@ -656,6 +933,50 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
     registrationChart.setOption(registrationOption);
 
     const cropsChart = echarts.init(document.getElementById("cropsChart"));
+    
+    // Prepare real data for crops chart
+    const cropsData = dashboardData.cropsDataByPurok;
+    const cropTypes = Object.keys(cropsData);
+    
+    // Get unique puroks across all crops
+    const allPuroks = new Set();
+    cropTypes.forEach(cropType => {
+      Object.keys(cropsData[cropType]).forEach(purok => allPuroks.add(purok));
+    });
+    const purokList = Array.from(allPuroks).sort();
+    
+    // Get top 5 crops by total count - reversed for top to bottom display
+    const cropTotals = cropTypes.map(cropType => ({
+      name: cropType,
+      total: Object.values(cropsData[cropType]).reduce((sum, val) => sum + val, 0)
+    })).sort((a, b) => b.total - a.total).slice(0, 5);
+    
+    const topCropNames = cropTotals.map(c => c.name).reverse();
+    
+    // Calculate total production per purok and sort by highest first
+    const purokTotals = purokList.map(purok => ({
+      purok,
+      total: topCropNames.reduce((sum, cropName) => sum + (cropsData[cropName]?.[purok] || 0), 0)
+    })).sort((a, b) => b.total - a.total);
+    
+    const sortedPurokList = purokTotals.map(p => p.purok);
+    
+    // Build series for each purok
+    const cropsSeries = sortedPurokList.map((purok, idx) => {
+      const colors = [
+        "#052e16", "#14532d", "#166534", "#15803d", "#16a34a",
+        "#22c55e", "#4ade80", "#86efac", "#bbf7d0", "#d9f99d", "#ecfccb"
+      ];
+      
+      return {
+        name: purok,
+        type: "bar",
+        stack: "total",
+        data: topCropNames.map(cropName => cropsData[cropName]?.[purok] || 0),
+        itemStyle: { color: colors[idx % colors.length] }
+      };
+    });
+    
     const cropsOption = {
       animation: true,
       tooltip: {
@@ -664,23 +985,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         borderColor: tooltipBorder,
         textStyle: { color: textColor },
         formatter: function (params) {
-          return `${params.seriesName}: ${params.value} tons\n${params.name}`;
+          return `${params.seriesName}: ${params.value}<br/>${params.name}`;
         },
       },
       legend: {
-        data: [
-          "Purok 1",
-          "Purok 2",
-          "Purok 3",
-          "Purok 4",
-          "Purok 5",
-          "Purok 6",
-          "Purok 7",
-          "Purok 8",
-          "Purok 9",
-          "Purok 10",
-          "Purok 11",
-        ],
+        data: sortedPurokList,
         textStyle: { color: textColor },
         type: "scroll",
         top: "3%",
@@ -698,94 +1007,59 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
       },
       yAxis: {
         type: "category",
-        data: ["Vegetables", "Banana", "Coconut", "Corn", "Rice"],
+        data: topCropNames.length > 0 ? topCropNames : ["No Data"],
         axisLabel: { color: textColor },
-        inverse: false, // Bottom to top
+        inverse: false,
       },
-      series: [
-        {
-          name: "Purok 1",
-          type: "bar",
-          stack: "total",
-          data: [21, 34, 56, 78, 145],
-          itemStyle: { color: "#052e16" },
-        },
-        {
-          name: "Purok 2",
-          type: "bar",
-          stack: "total",
-          data: [18, 29, 48, 65, 123],
-          itemStyle: { color: "#14532d" },
-        },
-        {
-          name: "Purok 3",
-          type: "bar",
-          stack: "total",
-          data: [19, 31, 52, 72, 134],
-          itemStyle: { color: "#166534" },
-        },
-        {
-          name: "Purok 4",
-          type: "bar",
-          stack: "total",
-          data: [15, 23, 39, 54, 109],
-          itemStyle: { color: "#15803d" },
-        },
-        {
-          name: "Purok 5",
-          type: "bar",
-          stack: "total",
-          data: [18, 23, 45, 89, 134],
-          itemStyle: { color: "#16a34a" },
-        },
-        {
-          name: "Purok 6",
-          type: "bar",
-          stack: "total",
-          data: [15, 19, 38, 67, 98],
-          itemStyle: { color: "#22c55e" },
-        },
-        {
-          name: "Purok 7",
-          type: "bar",
-          stack: "total",
-          data: [12, 15, 29, 54, 87],
-          itemStyle: { color: "#4ade80" },
-        },
-        {
-          name: "Purok 8",
-          type: "bar",
-          stack: "total",
-          data: [9, 12, 21, 43, 76],
-          itemStyle: { color: "#86efac" },
-        },
-        {
-          name: "Purok 9",
-          type: "bar",
-          stack: "total",
-          data: [6, 8, 17, 32, 65],
-          itemStyle: { color: "#bbf7d0" },
-        },
-        {
-          name: "Purok 10",
-          type: "bar",
-          stack: "total",
-          data: [12, 18, 31, 43, 87],
-          itemStyle: { color: "#d9f99d" },
-        },
-        {
-          name: "Purok 11",
-          type: "bar",
-          stack: "total",
-          data: [9, 15, 24, 32, 68],
-          itemStyle: { color: "#ecfccb" },
-        },
-      ],
+      series: cropsSeries.length > 0 ? cropsSeries : [{
+        name: "No Data",
+        type: "bar",
+        data: [0]
+      }],
       backgroundColor: "transparent",
     };
     cropsChart.setOption(cropsOption);
 
     const animalsChart = echarts.init(document.getElementById("animalsChart"));
+    
+    // Prepare real data for animals chart
+    const animalsData = dashboardData.animalsDataByPurok;
+    const animalTypes = Object.keys(animalsData);
+    const allAnimalPuroks = new Set();
+    animalTypes.forEach(animalType => {
+      Object.keys(animalsData[animalType]).forEach(purok => allAnimalPuroks.add(purok));
+    });
+    const animalPurokList = Array.from(allAnimalPuroks).sort();
+    const animalTotals = animalTypes.map(animalType => ({
+      name: animalType,
+      total: Object.values(animalsData[animalType]).reduce((sum, val) => sum + val, 0)
+    })).sort((a, b) => b.total - a.total).slice(0, 5);
+    const topAnimalNames = animalTotals.map(a => a.name).reverse();
+    
+    // Calculate total population per purok and sort by highest first
+    const animalPurokTotals = animalPurokList.map(purok => ({
+      purok,
+      total: topAnimalNames.reduce((sum, animalName) => sum + (animalsData[animalName]?.[purok] || 0), 0)
+    })).sort((a, b) => b.total - a.total);
+    
+    const sortedAnimalPurokList = animalPurokTotals.map(p => p.purok);
+    
+    // Build series for each purok (orange color scheme)
+    const animalsSeries = sortedAnimalPurokList.map((purok, idx) => {
+      const colors = [
+        "#431407", "#7c2d12", "#9a3412", "#c2410c", "#ea580c",
+        "#f97316", "#fb923c", "#fdba74", "#fed7aa", "#ffedd5", "#fff7ed"
+      ];
+      
+      return {
+        name: purok,
+        type: "bar",
+        stack: "total",
+        data: topAnimalNames.map(animalName => animalsData[animalName]?.[purok] || 0),
+        itemStyle: { color: colors[idx % colors.length] }
+      };
+    });
+    
     const animalsOption = {
       animation: true,
       tooltip: {
@@ -798,19 +1072,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         },
       },
       legend: {
-        data: [
-          "Purok 1",
-          "Purok 2",
-          "Purok 3",
-          "Purok 4",
-          "Purok 5",
-          "Purok 6",
-          "Purok 7",
-          "Purok 8",
-          "Purok 9",
-          "Purok 10",
-          "Purok 11",
-        ],
+        data: sortedAnimalPurokList,
         textStyle: { color: textColor },
         type: "scroll",
         top: "3%",
@@ -828,7 +1090,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
       },
       yAxis: {
         type: "category",
-        data: ["Cattle", "Carabao", "Goat", "Swine", "Chicken"],
+        data: topAnimalNames.length > 0 ? topAnimalNames : ["No Data"],
         axisLabel: { color: textColor },
       },
       series: [
@@ -910,6 +1172,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           itemStyle: { color: "#fff7ed" },
         },
       ],
+      series: animalsSeries.length > 0 ? animalsSeries : [{
+        name: "No Data",
+        type: "bar",
+        data: [0]
+      }],
       backgroundColor: "transparent",
     };
     animalsChart.setOption(animalsOption);
@@ -1230,111 +1497,145 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-foreground sticky left-0 bg-card font-medium">
-                      Upper
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      312.7
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      1,234.8
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      189.4
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      678.9
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      167.2
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      389.5
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      100.6
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      222.8
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      298.1
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      387.6
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-foreground sticky left-0 bg-card font-medium">
-                      Lower
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      245.5
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      982.1
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      156.8
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      548.2
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      123.8
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      298.3
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      65.5
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      158.4
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      234.2
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      298.5
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="border-t-2 border-blue-500 bg-muted/30">
-                    <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
-                      Total
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      558.2
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center border-r border-border">
-                      2,216.9
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      346.2
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center border-r border-border">
-                      1,227.1
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      291.0
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center border-r border-border">
-                      687.8
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      166.1
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center border-r border-border">
-                      381.2
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      532.3
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      686.1
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const barangays = Object.keys(dashboardData.productionSummary);
+                    
+                    if (barangays.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                            No production data available
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    
+                    let totalRiceIrrigatedHa = 0;
+                    let totalRiceIrrigatedCount = 0;
+                    let totalRiceRainfedHa = 0;
+                    let totalRiceRainfedCount = 0;
+                    let totalCornYellowHa = 0;
+                    let totalCornYellowCount = 0;
+                    let totalCornWhiteHa = 0;
+                    let totalCornWhiteCount = 0;
+                    let totalOthersHa = 0;
+                    let totalOthersProduction = 0;
+                    
+                    const rows = barangays.map((barangay, idx) => {
+                      const data = dashboardData.productionSummary[barangay];
+                      
+                      // Rice Irrigated
+                      const riceIrrigatedHa = data.crops.rice.irrigated.area || 0;
+                      const riceIrrigatedProduction = (riceIrrigatedHa * 4).toFixed(1);
+                      
+                      // Rice Rainfed
+                      const riceRainfedHa = data.crops.rice.rainfed.area || 0;
+                      const riceRainfedProduction = (riceRainfedHa * 4).toFixed(1);
+                      
+                      // Corn Yellow
+                      const cornYellowHa = data.crops.corn.yellow.area || 0;
+                      const cornYellowProduction = (cornYellowHa * 4).toFixed(1);
+                      
+                      // Corn White
+                      const cornWhiteHa = data.crops.corn.white.area || 0;
+                      const cornWhiteProduction = (cornWhiteHa * 4).toFixed(1);
+                      
+                      // Others
+                      const othersHa = data.crops.others.area || 0;
+                      const othersProduction = (othersHa * 4).toFixed(1);
+                      
+                      // Update totals
+                      totalRiceIrrigatedHa += riceIrrigatedHa;
+                      totalRiceIrrigatedCount += riceIrrigatedHa * 4;
+                      totalRiceRainfedHa += riceRainfedHa;
+                      totalRiceRainfedCount += riceRainfedHa * 4;
+                      totalCornYellowHa += cornYellowHa;
+                      totalCornYellowCount += cornYellowHa * 4;
+                      totalCornWhiteHa += cornWhiteHa;
+                      totalCornWhiteCount += cornWhiteHa * 4;
+                      totalOthersHa += othersHa;
+                      totalOthersProduction += othersHa * 4;
+                      
+                      return (
+                        <TableRow key={idx} className="border-b border-border hover:bg-muted/20 transition-colors">
+                          <TableCell className="text-foreground sticky left-0 bg-card font-medium">
+                            {barangay}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {riceIrrigatedHa.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                            {riceIrrigatedProduction}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {riceRainfedHa.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                            {riceRainfedProduction}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {cornYellowHa.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                            {cornYellowProduction}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {cornWhiteHa.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                            {cornWhiteProduction}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {othersHa.toFixed(1)}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {othersProduction}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                    
+                    // Add total row
+                    rows.push(
+                      <TableRow key="total" className="border-t-2 border-blue-500 bg-muted/30">
+                        <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
+                          Total
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalRiceIrrigatedHa.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                          {totalRiceIrrigatedCount.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalRiceRainfedHa.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                          {totalRiceRainfedCount.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalCornYellowHa.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                          {totalCornYellowCount.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalCornWhiteHa.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                          {totalCornWhiteCount.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalOthersHa.toFixed(1)}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalOthersProduction.toFixed(1)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                    
+                    return rows;
+                  })()}
                 </TableBody>
               </Table>
             </div>
@@ -1392,75 +1693,107 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-foreground sticky left-0 bg-card font-medium">
-                      Upper
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      332
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      785
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      433
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      1,481
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      89
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      67
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="border-b border-border hover:bg-muted/20 transition-colors">
-                    <TableCell className="text-foreground sticky left-0 bg-card font-medium">
-                      Lower
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      475
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      1,091
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center border-r border-border">
-                      495
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      1,764
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      134
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-center">
-                      98
-                    </TableCell>
-                  </TableRow>
-                  <TableRow className="border-t-2 border-orange-500 bg-muted/30">
-                    <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
-                      Total
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      807
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      1,876
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center border-r border-border">
-                      928
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      3,245
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      223
-                    </TableCell>
-                    <TableCell className="text-foreground font-bold text-center">
-                      165
-                    </TableCell>
-                  </TableRow>
+                  {(() => {
+                    const barangays = Object.keys(dashboardData.productionSummary);
+                    
+                    if (barangays.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                            No livestock or poultry data available
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    
+                    let totalCow = 0;
+                    let totalPig = 0;
+                    let totalLivestockOthers = 0;
+                    let totalChicken = 0;
+                    let totalDuck = 0;
+                    let totalPoultryOthers = 0;
+                    
+                    const rows = barangays.map((barangay, idx) => {
+                      const data = dashboardData.productionSummary[barangay];
+                      
+                      // Livestock counts
+                      const cow = data.livestock['Cow'] || data.livestock['Cattle'] || 0;
+                      const pig = data.livestock['Pig'] || data.livestock['Swine'] || 0;
+                      const livestockOthers = Object.keys(data.livestock)
+                        .filter(k => !['Cow', 'Cattle', 'Pig', 'Swine'].includes(k))
+                        .reduce((sum, k) => sum + data.livestock[k], 0);
+                      
+                      // Poultry counts
+                      const chicken = data.poultry['Chicken'] || 0;
+                      const duck = data.poultry['Duck'] || 0;
+                      const poultryOthers = Object.keys(data.poultry)
+                        .filter(k => !['Chicken', 'Duck'].includes(k))
+                        .reduce((sum, k) => sum + data.poultry[k], 0);
+                      
+                      // Update totals
+                      totalCow += cow;
+                      totalPig += pig;
+                      totalLivestockOthers += livestockOthers;
+                      totalChicken += chicken;
+                      totalDuck += duck;
+                      totalPoultryOthers += poultryOthers;
+                      
+                      return (
+                        <TableRow key={idx} className="border-b border-border hover:bg-muted/20 transition-colors">
+                          <TableCell className="text-foreground sticky left-0 bg-card font-medium">
+                            {barangay}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {cow.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {pig.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                            {livestockOthers.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {chicken.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {duck.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-center">
+                            {poultryOthers.toLocaleString()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                    
+                    // Add total row
+                    rows.push(
+                      <TableRow key="total" className="border-t-2 border-orange-500 bg-muted/30">
+                        <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
+                          Total
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalCow.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalPig.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                          {totalLivestockOthers.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalChicken.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalDuck.toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-foreground font-bold text-center">
+                          {totalPoultryOthers.toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    );
+                    
+                    return rows;
+                  })()}
                 </TableBody>
               </Table>
             </div>
