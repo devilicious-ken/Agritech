@@ -56,8 +56,8 @@ const ConnectionStatus = ({ detailed = false }) => {
           ></div>
           <span className="text-xs">
             {supabaseStatus.connected
-              ? "Supabase Connected"
-              : "Supabase Disconnected"}
+              ? "Connected"
+              : "No Cennection"}
           </span>
           <button
             onClick={checkSupabase}
@@ -99,3 +99,4 @@ const ConnectionStatus = ({ detailed = false }) => {
 };
 
 export default ConnectionStatus;
+
