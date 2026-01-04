@@ -16,7 +16,7 @@ import ApiService from "./services/api";
 import { supabase } from "./services/api"; // ✅ Add { supabase }
 import { Toast } from "@/components/ui/toast";
 import "@fortawesome/fontawesome-free/css/all.min.css";
-import Footer from "./components/Footer";
+
 
 export const ThemeContext = createContext();
 // Main App Content Component (inside Router)
@@ -367,7 +367,6 @@ const AppContent = () => {
             />
             <main className="flex-1 overflow-y-auto bg-background text-foreground transition-colors duration-300">
               <AppRoutes user={user} setUser={setUser} />
-              <Footer />
             </main>
           </div>
         </div>
@@ -384,3 +383,4 @@ const App = () => (
 );
 
 export default App;
+
