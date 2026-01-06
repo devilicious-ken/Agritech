@@ -1285,109 +1285,163 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto rounded-md border-0">
+            <div className="overflow-x-auto scroll-smooth rounded-md border-0" style={{ 
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgb(156 163 175) transparent'
+            }}>
+              <style>{`
+                .overflow-x-auto::-webkit-scrollbar {
+                  height: 8px;
+                }
+                .overflow-x-auto::-webkit-scrollbar-track {
+                  background: transparent;
+                }
+                .overflow-x-auto::-webkit-scrollbar-thumb {
+                  background: rgb(156 163 175);
+                  border-radius: 4px;
+                }
+                .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+                  background: rgb(107 114 128);
+                }
+              `}</style>
               <Table>
                 <TableHeader className="bg-muted">
-                  <TableRow>
-                    <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 min-w-[50px]">
-                      Barangay
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="4"
-                    >
-                      Rice
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="4"
-                    >
-                      Corn
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center"
-                      colSpan="2"
-                    >
-                      Others
-                    </TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10"></TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="2"
-                    >
-                      Irrigated
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="2"
-                    >
-                      Rainfed
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="2"
-                    >
-                      Yellow
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="2"
-                    >
-                      White
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center"></TableHead>
-                    <TableHead className="text-muted-foreground text-center"></TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10"></TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      ha
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs border-r border-border">
-                      prd'n
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      ha
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs border-r border-border">
-                      prd'n
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      ha
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs border-r border-border">
-                      prd'n
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      ha
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs border-r border-border">
-                      prd'n
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      ha
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center text-xs">
-                      prd'n
-                    </TableHead>
-                  </TableRow>
+                  {(() => {
+                    // Extract all unique "other" crop names from all barangays
+                    const allOtherCrops = new Set();
+                    Object.values(dashboardData.productionSummary || {}).forEach(summary => {
+                      if (summary.crops && summary.crops.others) {
+                        Object.keys(summary.crops.others).forEach(cropName => allOtherCrops.add(cropName));
+                      }
+                    });
+                    const sortedOtherCrops = Array.from(allOtherCrops).sort();
+                    
+                    return (
+                      <>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 min-w-[200px] h-12">
+                            Barangay
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-12"
+                            colSpan="4"
+                          >
+                            Rice
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-12"
+                            colSpan="4"
+                          >
+                            Corn
+                          </TableHead>
+                          {sortedOtherCrops.map(cropName => (
+                            <TableHead
+                              key={cropName}
+                              className="text-muted-foreground text-center border-l border-r border-border min-w-[180px] h-12"
+                              colSpan="2"
+                            >
+                              {cropName}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 h-10"></TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-10 min-w-[100px]"
+                            colSpan="2"
+                          >
+                            Irrigated
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-10 min-w-[100px]"
+                            colSpan="2"
+                          >
+                            Rainfed
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-10 min-w-[100px]"
+                            colSpan="2"
+                          >
+                            Yellow
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-r border-border h-10 min-w-[100px]"
+                            colSpan="2"
+                          >
+                            White
+                          </TableHead>
+                          {sortedOtherCrops.map(cropName => (
+                            <React.Fragment key={`sub-${cropName}`}>
+                              <TableHead className="text-muted-foreground text-center h-10 border-l border-border"></TableHead>
+                              <TableHead className="text-muted-foreground text-center h-10 border-r border-border"></TableHead>
+                            </React.Fragment>
+                          ))}
+                        </TableRow>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 h-10"></TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium h-10">
+                            ha
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium border-r border-border h-10">
+                            prd'n
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium h-10">
+                            ha
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium border-r border-border h-10">
+                            prd'n
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium h-10">
+                            ha
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium border-r border-border h-10">
+                            prd'n
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium h-10">
+                            ha
+                          </TableHead>
+                          <TableHead className="text-muted-foreground text-center text-sm font-medium border-r border-border h-10">
+                            prd'n
+                          </TableHead>
+                          {sortedOtherCrops.map(cropName => (
+                            <React.Fragment key={`unit-${cropName}`}>
+                              <TableHead className="text-muted-foreground text-center text-sm font-medium h-10 border-l border-border">
+                                ha
+                              </TableHead>
+                              <TableHead className="text-muted-foreground text-center text-sm font-medium h-10 border-r border-border">
+                                prd'n
+                              </TableHead>
+                            </React.Fragment>
+                          ))}
+                        </TableRow>
+                      </>
+                    );
+                  })()}
                 </TableHeader>
                 <TableBody>
                   {(() => {
-                    const barangays = Object.keys(dashboardData.productionSummary);
+                    const barangays = Object.keys(dashboardData.productionSummary || {});
                     
                     if (barangays.length === 0) {
                       return (
                         <TableRow>
-                          <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={99} className="text-center text-muted-foreground py-10 text-base">
                             No production data available
                           </TableCell>
                         </TableRow>
                       );
                     }
                     
+                    // Extract all unique "other" crop names
+                    const allOtherCrops = new Set();
+                    Object.values(dashboardData.productionSummary || {}).forEach(summary => {
+                      if (summary.crops && summary.crops.others) {
+                        Object.keys(summary.crops.others).forEach(cropName => allOtherCrops.add(cropName));
+                      }
+                    });
+                    const sortedOtherCrops = Array.from(allOtherCrops).sort();
+                    
+                    // Initialize totals
                     let totalRiceIrrigatedHa = 0;
                     let totalRiceIrrigatedCount = 0;
                     let totalRiceRainfedHa = 0;
@@ -1396,8 +1450,10 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                     let totalCornYellowCount = 0;
                     let totalCornWhiteHa = 0;
                     let totalCornWhiteCount = 0;
-                    let totalOthersHa = 0;
-                    let totalOthersProduction = 0;
+                    const totalOtherCrops = {};
+                    sortedOtherCrops.forEach(cropName => {
+                      totalOtherCrops[cropName] = { ha: 0, production: 0 };
+                    });
                     
                     const rows = barangays.map((barangay, idx) => {
                       const data = dashboardData.productionSummary[barangay];
@@ -1418,15 +1474,6 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                       const cornWhiteHa = data.crops.corn.white.area || 0;
                       const cornWhiteProduction = (cornWhiteHa * 4).toFixed(1);
                       
-                      // Others - sum all from others object
-                      let othersHa = 0;
-                      if (data.crops.others) {
-                        Object.values(data.crops.others).forEach(other => {
-                          othersHa += (other.area || 0);
-                        });
-                      }
-                      const othersProduction = (othersHa * 4).toFixed(1);
-                      
                       // Update totals
                       totalRiceIrrigatedHa += riceIrrigatedHa;
                       totalRiceIrrigatedCount += riceIrrigatedHa * 4;
@@ -1436,44 +1483,56 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                       totalCornYellowCount += cornYellowHa * 4;
                       totalCornWhiteHa += cornWhiteHa;
                       totalCornWhiteCount += cornWhiteHa * 4;
-                      totalOthersHa += othersHa;
-                      totalOthersProduction += othersHa * 4;
                       
                       return (
                         <TableRow key={idx} className="border-b border-border hover:bg-muted/20 transition-colors">
-                          <TableCell className="text-foreground sticky left-0 bg-card font-medium">
+                          <TableCell className="text-foreground sticky left-0 bg-card font-medium py-4 px-4 text-sm">
                             {barangay}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
+                          <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm">
                             {riceIrrigatedHa.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                          <TableCell className="text-muted-foreground text-center border-r border-border py-4 px-4 text-sm">
                             {riceIrrigatedProduction}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
+                          <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm">
                             {riceRainfedHa.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                          <TableCell className="text-muted-foreground text-center border-r border-border py-4 px-4 text-sm">
                             {riceRainfedProduction}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
+                          <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm">
                             {cornYellowHa.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                          <TableCell className="text-muted-foreground text-center border-r border-border py-4 px-4 text-sm">
                             {cornYellowProduction}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
+                          <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm">
                             {cornWhiteHa.toFixed(1)}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center border-r border-border">
+                          <TableCell className="text-muted-foreground text-center border-r border-border py-4 px-4 text-sm">
                             {cornWhiteProduction}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {othersHa.toFixed(1)}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {othersProduction}
-                          </TableCell>
+                          {sortedOtherCrops.map(cropName => {
+                            const cropData = data.crops.others?.[cropName] || { area: 0 };
+                            const ha = cropData.area || 0;
+                            const production = (ha * 4).toFixed(1);
+                            
+                            // Update totals
+                            totalOtherCrops[cropName].ha += ha;
+                            totalOtherCrops[cropName].production += ha * 4;
+                            
+                            return (
+                              <React.Fragment key={`${barangay}-${cropName}`}>
+                                <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm border-l border-border">
+                                  {ha > 0 ? ha.toFixed(1) : '-'}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-center py-4 px-4 text-sm border-r border-border">
+                                  {ha > 0 ? production : '-'}
+                                </TableCell>
+                              </React.Fragment>
+                            );
+                          })}
                         </TableRow>
                       );
                     });
@@ -1481,39 +1540,43 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                     // Add total row
                     rows.push(
                       <TableRow key="total" className="border-t-2 border-blue-500 bg-muted/30">
-                        <TableCell className="text-foreground font-bold sticky left-0 bg-muted">
+                        <TableCell className="text-foreground font-bold sticky left-0 bg-muted py-4 px-4 text-sm">
                           Total
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
+                        <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm">
                           {totalRiceIrrigatedHa.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                        <TableCell className="text-foreground font-bold text-center border-r border-border py-4 px-4 text-sm">
                           {totalRiceIrrigatedCount.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
+                        <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm">
                           {totalRiceRainfedHa.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                        <TableCell className="text-foreground font-bold text-center border-r border-border py-4 px-4 text-sm">
                           {totalRiceRainfedCount.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
+                        <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm">
                           {totalCornYellowHa.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                        <TableCell className="text-foreground font-bold text-center border-r border-border py-4 px-4 text-sm">
                           {totalCornYellowCount.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
+                        <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm">
                           {totalCornWhiteHa.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center border-r border-border">
+                        <TableCell className="text-foreground font-bold text-center border-r border-border py-4 px-4 text-sm">
                           {totalCornWhiteCount.toFixed(1)}
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalOthersHa.toFixed(1)}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalOthersProduction.toFixed(1)}
-                        </TableCell>
+                        {sortedOtherCrops.map(cropName => (
+                          <React.Fragment key={`total-${cropName}`}>
+                            <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm border-l border-border">
+                              {totalOtherCrops[cropName].ha.toFixed(1)}
+                            </TableCell>
+                            <TableCell className="text-foreground font-bold text-center py-4 px-4 text-sm border-r border-border">
+                              {totalOtherCrops[cropName].production.toFixed(1)}
+                            </TableCell>
+                          </React.Fragment>
+                        ))}
                       </TableRow>
                     );
                     
