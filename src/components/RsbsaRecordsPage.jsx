@@ -241,8 +241,6 @@ const RsbsaRecordsPage = () => {
     const types = {
       farmer: "Farmer",
       fisherfolk: "Fisherfolk",
-      agri_youth: "Agri-Youth",
-      farm_worker: "Farm Worker/Laborer",
     };
     return types[registry] || registry;
   };
@@ -577,10 +575,6 @@ const RsbsaRecordsPage = () => {
         return "bg-green-500/10 text-green-600 border-0";
       case "Fisherfolk":
         return "bg-blue-500/10 text-blue-600 border-0";
-      case "Farm Worker/Laborer":
-        return "bg-orange-500/10 text-orange-600 border-0";
-      case "Agri-Youth":
-        return "bg-red-500/10 text-red-600 border-0";
       default:
         return "bg-gray-500/10 text-gray-500 border-0";
     }
@@ -677,10 +671,6 @@ const RsbsaRecordsPage = () => {
                   <option value="all">All Types</option>
                   <option value="Farmer">Farmer</option>
                   <option value="Fisherfolk">Fisherfolk</option>
-                  <option value="Farm Worker/Laborer">
-                    Farm Worker/Laborer
-                  </option>
-                  <option value="Agri-Youth">Agri-Youth</option>
                 </select>
               </div>
               <div>
