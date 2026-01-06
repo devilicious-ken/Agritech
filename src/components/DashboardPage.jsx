@@ -315,16 +315,27 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         // First, fetch parcel_infos to get farm_kind data
         const parcelInfos = await ApiService.getAllParcelInfos();
         
-        // Create a map for quick lookup: parcel_id -> parcel_info
-        const parcelInfoMap = {};
+        // Create a map for quick lookup: parcel_info_id -> parcel_info (for crops that have parcel_info_id)
+        const parcelInfoByIdMap = {};
         parcelInfos.forEach(info => {
-          parcelInfoMap[info.parcel_id] = info;
+          parcelInfoByIdMap[info.id] = info;
         });
         
-        // Group crops by barangay with detailed breakdown
+        // Helper function to parse hectares from value_text
+        const parseHectares = (valueText) => {
+          if (!valueText) return 0;
+          // value_text could be "2.5 ha", "2.5", or just a number
+          const match = valueText.toString().match(/[\d.]+/);
+          return match ? parseFloat(match[0]) : 0;
+        };
+        
+        // Group crops by barangay with detailed breakdown using REAL hectares
         activeCrops.forEach(crop => {
           const { barangay } = getLocation(crop.registrant_id);
           const cropName = crop.name || 'Others';
+          
+          // Parse actual hectares from value_text field
+          const hectares = parseHectares(crop.value_text);
           
           if (!productionSummary[barangay]) {
             productionSummary[barangay] = {
@@ -339,98 +350,47 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
             };
           }
           
-          // Categorize crops by type and sub-type
+          // Add to total area
+          productionSummary[barangay].totalArea += hectares;
+          
+          // Categorize crops by type and sub-type with REAL areas
           if (cropName.toLowerCase().includes('rice')) {
-            // For rice, categorize by farm type (irrigated/rainfed)
-            // We'd need to link crop to parcel_info through parcel_info_id
-            // For now, default to rainfed if not specified
-            productionSummary[barangay].crops.rice.rainfed.count++;
+            // For rice, categorize by farm type using parcel_info_id
+            let farmKind = 'rainfed'; // default
+            
+            // If crop has parcel_info_id, get the farm_kind
+            if (crop.parcel_info_id && parcelInfoByIdMap[crop.parcel_info_id]) {
+              const parcelInfo = parcelInfoByIdMap[crop.parcel_info_id];
+              if (parcelInfo.farm_kind) {
+                farmKind = parcelInfo.farm_kind.toLowerCase();
+              }
+            }
+            
+            // Assign to irrigated or rainfed based on farm_kind
+            if (farmKind.includes('irrigated')) {
+              productionSummary[barangay].crops.rice.irrigated.count++;
+              productionSummary[barangay].crops.rice.irrigated.area += hectares;
+            } else {
+              productionSummary[barangay].crops.rice.rainfed.count++;
+              productionSummary[barangay].crops.rice.rainfed.area += hectares;
+            }
           } else if (cropName.toLowerCase().includes('corn')) {
             // Categorize by corn type (yellow/white)
             const cornType = crop.corn_type ? crop.corn_type.toLowerCase() : 'yellow';
             if (cornType === 'white') {
               productionSummary[barangay].crops.corn.white.count++;
+              productionSummary[barangay].crops.corn.white.area += hectares;
             } else {
               productionSummary[barangay].crops.corn.yellow.count++;
+              productionSummary[barangay].crops.corn.yellow.area += hectares;
             }
           } else {
-            // Other specific crops - store individually
+            // Other specific crops - store individually with real area
             if (!productionSummary[barangay].crops.others[cropName]) {
               productionSummary[barangay].crops.others[cropName] = { count: 0, area: 0 };
             }
             productionSummary[barangay].crops.others[cropName].count++;
-          }
-        });
-        
-        // Add farm areas and categorize by farm type
-        registrants.forEach(r => {
-          if (r.deleted_at) return;
-          if (r.farm_parcels && r.farm_parcels.length > 0 && r.addresses && r.addresses[0]) {
-            const barangay = r.addresses[0].barangay || 'Unknown';
-            
-            if (!productionSummary[barangay]) {
-              productionSummary[barangay] = {
-                crops: {
-                  rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
-                  corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
-                  others: {}
-                },
-                livestock: {},
-                poultry: {},
-                totalArea: 0
-              };
-            }
-            
-            r.farm_parcels.forEach(parcel => {
-              if (parcel.total_farm_area_ha) {
-                const area = parseFloat(parcel.total_farm_area_ha);
-                productionSummary[barangay].totalArea += area;
-                
-                // Get parcel info for this parcel
-                const parcelInfo = parcelInfoMap[parcel.id];
-                if (parcelInfo && parcelInfo.farm_kind) {
-                  const farmKind = parcelInfo.farm_kind.toLowerCase();
-                  
-                  // Allocate area based on farm type
-                  if (farmKind.includes('irrigated')) {
-                    productionSummary[barangay].crops.rice.irrigated.area += area;
-                  } else if (farmKind.includes('rainfed')) {
-                    productionSummary[barangay].crops.rice.rainfed.area += area;
-                  }
-                }
-              }
-            });
-          }
-        });
-        
-        // Allocate remaining area (non-rice) to corn and others based on their proportions
-        Object.keys(productionSummary).forEach(barangay => {
-          const summary = productionSummary[barangay];
-          
-          // Calculate rice area
-          const riceArea = summary.crops.rice.irrigated.area + summary.crops.rice.rainfed.area;
-          
-          // Remaining area for corn and others
-          const remainingArea = summary.totalArea - riceArea;
-          
-          if (remainingArea > 0) {
-            // Count non-rice crops
-            const cornYellowCount = summary.crops.corn.yellow.count;
-            const cornWhiteCount = summary.crops.corn.white.count;
-            const othersCount = Object.values(summary.crops.others).reduce((sum, o) => sum + o.count, 0);
-            const totalNonRiceCrops = cornYellowCount + cornWhiteCount + othersCount;
-            
-            if (totalNonRiceCrops > 0) {
-              // Allocate area proportionally based on crop counts
-              summary.crops.corn.yellow.area = (remainingArea * cornYellowCount / totalNonRiceCrops);
-              summary.crops.corn.white.area = (remainingArea * cornWhiteCount / totalNonRiceCrops);
-              
-              // Allocate to each "other" crop proportionally
-              Object.keys(summary.crops.others).forEach(cropName => {
-                const cropCount = summary.crops.others[cropName].count;
-                summary.crops.others[cropName].area = (remainingArea * cropCount / totalNonRiceCrops);
-              });
-            }
+            productionSummary[barangay].crops.others[cropName].area += hectares;
           }
         });
         
