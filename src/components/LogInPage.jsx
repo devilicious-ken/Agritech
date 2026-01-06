@@ -40,7 +40,7 @@ const LoginPage = ({
               <Leaf className="h-16 w-16 text-[#f5b301] drop-shadow-[0_0_15px_rgba(0,0,0,0.9)]" />
             </div>
             <h1 className="text-4xl font-bold mb-4 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.95)]">
-              Jasaan AgriTech Hub
+              Jasaan AgriTech 
             </h1>
             <p className="text-xl opacity-90 text-gray-200 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
               Empowering agricultural communities through digital innovation
@@ -58,7 +58,7 @@ const LoginPage = ({
               <Leaf className="h-12 w-12 text-[#14532d]" />
             </div>
             <h1 className="text-2xl font-bold text-[#f7f7f1]">
-              Jasaan AgriTech Hub
+              Jasaan AgriTech 
             </h1>
             <p className="text-[#b8b89d]">Agricultural Management System</p>
           </div>
@@ -135,7 +135,7 @@ const LoginPage = ({
           
           {/* Footer */}
           <footer className="text-center text-sm text-[#b8b89d] mt-8">
-            <p>&copy; 2025 Jasaan AgriTech Hub. All rights reserved.</p>
+            <p>&copy; 2025 Jasaan AgriTech . All rights reserved.</p>
             <p className="mt-1">Barangay Agricultural Management System</p>
           </footer>
         </div>
@@ -145,3 +145,4 @@ const LoginPage = ({
 };
 
 export default LoginPage;
+
