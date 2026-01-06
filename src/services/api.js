@@ -276,7 +276,10 @@ async getRegistrants() {
       crops(*),
       livestock(*),
       poultry(*),
-      farm_parcels(*),
+      farm_parcels(
+        *,
+        parcel_infos(*)
+      ),
       financial_infos(*),
       fishing_activities(*)
     `)
