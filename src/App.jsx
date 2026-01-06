@@ -157,8 +157,11 @@ const AppContent = () => {
         email: profile.email,
         first_name: profile.first_name || "",
         last_name: profile.last_name || "",
+        firstName:profile.first_name || "",
+        lastName: profile.last_name || "",
         role: (profile.role || "user").trim(),
         is_active: profile.is_active ?? true,
+        avatar_url: profile.avatar_url || "",
         last_login: new Date().toISOString(), // ✅ Update with current time
         created_at: profile.created_at || null,
         source: "supabase_table",
