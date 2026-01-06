@@ -2227,6 +2227,8 @@ const renderFinancialTab = () => (
     className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
   >
     <option value="">Select</option>
+     <option value="farming">Farming</option>
+    <option value="fishing">Fishing</option>
     <option value="salary">Salary</option>
     <option value="business">Business</option>
     <option value="remittance">Remittance</option>
@@ -2927,6 +2929,7 @@ const renderPreviewTab = () => {
     </div>
   );
 };
+
 
 
 export default RegisterPage;
