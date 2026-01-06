@@ -30,6 +30,10 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [showImageModal, setShowImageModal] = useState(false);
+    const [showProfileSaveConfirm, setShowProfileSaveConfirm] = useState(false);
+    const [showPasswordSaveConfirm, setShowPasswordSaveConfirm] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Feedback
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -73,13 +77,8 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
             const reader = new FileReader();
             reader.onloadend = async () => {
                 const base64Data = reader.result;
+                // Only update preview, not global state
                 setAvatarUrl(base64Data);
-
-                // Optimistic update locally
-                const updatedUser = { ...user, avatar_url: base64Data };
-                setUser(updatedUser);
-                if (setAppUser) setAppUser(updatedUser);
-                localStorage.setItem('user', JSON.stringify(updatedUser));
 
                 // Save to DB
                 const { error } = await supabase
@@ -88,7 +87,15 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                     .eq('id', user.id);
 
                 if (error) throw error;
-                showMessage('success', 'Profile picture updated!');
+                
+                // Update global state only after successful save
+                const updatedUser = { ...user, avatar_url: base64Data };
+                setUser(updatedUser);
+                if (setAppUser) setAppUser(updatedUser);
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                
+                setSuccessMessage('Profile picture updated successfully!');
+                setShowSuccessModal(true);
             };
             reader.readAsDataURL(file);
         } catch (err) {
@@ -102,8 +109,11 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
     const handleUpdateProfile = async () => {
         try {
             setLoading(true);
+            setShowProfileSaveConfirm(false);
+            
             if (!firstName.trim() || !lastName.trim()) {
                 showMessage('error', 'First and Last name are required.');
+                setLoading(false);
                 return;
             }
 
@@ -120,11 +130,19 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
 
             if (error) throw error;
 
-            const updatedUser = { ...user, ...updates };
+            // Preserve all existing user fields including avatar_url
+            const updatedUser = { 
+                ...user, 
+                ...updates,
+                firstName: firstName,  // camelCase for compatibility
+                lastName: lastName     // camelCase for compatibility
+            };
             setUser(updatedUser);
             if (setAppUser) setAppUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
-            showMessage('success', 'Profile updated successfully!');
+            
+            setSuccessMessage('Profile updated successfully!');
+            setShowSuccessModal(true);
 
         } catch (err) {
             console.error(err);
@@ -137,12 +155,16 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
     const handleChangePassword = async () => {
         try {
             setLoading(true);
+            setShowPasswordSaveConfirm(false);
+            
             if (newPassword !== confirmPassword) {
                 showMessage('error', 'New passwords do not match.');
+                setLoading(false);
                 return;
             }
             if (newPassword.length < 6) {
                 showMessage('error', 'Password must be at least 6 characters.');
+                setLoading(false);
                 return;
             }
 
@@ -156,6 +178,7 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
 
             if (userData.password !== currentPassword) {
                 showMessage('error', 'Incorrect current password.');
+                setLoading(false);
                 return;
             }
 
@@ -166,7 +189,8 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
 
             if (updateError) throw updateError;
 
-            showMessage('success', 'Password changed successfully!');
+            setSuccessMessage('Password changed successfully!');
+            setShowSuccessModal(true);
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
@@ -341,7 +365,7 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                                     </div>
                                 </CardContent>
                                 <CardFooter className="flex justify-end border-t pt-6">
-                                    <Button onClick={handleUpdateProfile} disabled={loading}>
+                                    <Button onClick={() => setShowProfileSaveConfirm(true)} disabled={loading}>
                                         {loading ? <i className="fas fa-spinner fa-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                         Save Changes
                                     </Button>
@@ -421,7 +445,7 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
                                 </div>
                             </CardContent>
                             <CardFooter className="flex justify-end border-t pt-6">
-                                <Button onClick={handleChangePassword} disabled={loading}>
+                                <Button onClick={() => setShowPasswordSaveConfirm(true)} disabled={loading}>
                                     {loading ? <i className="fas fa-spinner fa-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                                     Update Password
                                 </Button>
@@ -491,6 +515,99 @@ const ProfilePage = ({ user: initialUser, setUser: setAppUser }) => {
 
                 </Tabs>
             </div>
+
+            {/* Profile Save Confirmation Modal */}
+            {showProfileSaveConfirm && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-card text-card-foreground rounded-lg shadow-lg w-full max-w-sm p-6 border border-border animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-semibold mb-2">Confirm Profile Update</h3>
+                        <p className="text-muted-foreground mb-6">
+                            Are you sure you want to save these changes to your profile?
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowProfileSaveConfirm(false)}
+                                className="px-4 py-2 rounded-md hover:bg-muted transition-colors text-sm font-medium"
+                                disabled={loading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleUpdateProfile}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors text-sm font-medium"
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <i className="fas fa-spinner fa-spin mr-2" />
+                                        Saving...
+                                    </>
+                                ) : (
+                                    'Save Changes'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Password Change Confirmation Modal */}
+            {showPasswordSaveConfirm && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-card text-card-foreground rounded-lg shadow-lg w-full max-w-sm p-6 border border-border animate-in fade-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-semibold mb-2">Confirm Password Change</h3>
+                        <p className="text-muted-foreground mb-6">
+                            Are you sure you want to change your password? You will need to use the new password for your next login.
+                        </p>
+                        <div className="flex justify-end space-x-3">
+                            <button
+                                onClick={() => setShowPasswordSaveConfirm(false)}
+                                className="px-4 py-2 rounded-md hover:bg-muted transition-colors text-sm font-medium"
+                                disabled={loading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleChangePassword}
+                                className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors text-sm font-medium"
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <i className="fas fa-spinner fa-spin mr-2" />
+                                        Updating...
+                                    </>
+                                ) : (
+                                    'Change Password'
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Success Confirmation Modal */}
+            {showSuccessModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <div className="bg-card text-card-foreground rounded-lg shadow-lg w-full max-w-sm p-6 border border-border animate-in fade-in zoom-in-95 duration-200">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mb-4">
+                                <i className="fas fa-check-circle text-green-500 text-3xl"></i>
+                            </div>
+                            <h3 className="text-lg font-semibold mb-2">Success!</h3>
+                            <p className="text-muted-foreground mb-6">
+                                {successMessage}
+                            </p>
+                            <button
+                                onClick={() => setShowSuccessModal(false)}
+                                className="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-md transition-colors text-sm font-medium"
+                            >
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
