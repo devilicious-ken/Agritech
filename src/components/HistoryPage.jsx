@@ -206,7 +206,7 @@ const handlePermanentDelete = async () => {
       const logs = archive.archive_data;
       
       // CSV headers
-      const headers = ['Time', 'User', 'Action', 'Target', 'IP Address'];
+      const headers = ['Time', 'User', 'Action', 'Target'];
       
       // Convert logs to CSV rows
       const rows = logs.map(log => [
@@ -220,8 +220,7 @@ const handlePermanentDelete = async () => {
         }),
         log.user_name,
         log.action,
-        log.target,
-        log.ip_address || 'N/A'
+        log.target
       ]);
       
       // Create CSV content
@@ -407,13 +406,12 @@ const handlePermanentDelete = async () => {
                     <TableHead className="text-muted-foreground">User</TableHead>
                     <TableHead className="text-muted-foreground">Action</TableHead>
                     <TableHead className="text-muted-foreground">Target</TableHead>
-                    <TableHead className="text-muted-foreground">IP Address</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentActivityLogs.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                         No activity logs found
                       </TableCell>
                     </TableRow>
@@ -433,9 +431,6 @@ const handlePermanentDelete = async () => {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{log.target}</TableCell>
-                        <TableCell className="text-muted-foreground font-mono text-sm">
-                          {log.ip_address || 'N/A'}
-                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -688,7 +683,6 @@ const handlePermanentDelete = async () => {
                                   <TableHead className="text-muted-foreground">User</TableHead>
                                   <TableHead className="text-muted-foreground">Action</TableHead>
                                   <TableHead className="text-muted-foreground">Target</TableHead>
-                                  <TableHead className="text-muted-foreground">IP Address</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -704,9 +698,6 @@ const handlePermanentDelete = async () => {
                                       </Badge>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">{log.target}</TableCell>
-                                    <TableCell className="text-muted-foreground font-mono text-sm">
-                                      {log.ip_address || 'N/A'}
-                                    </TableCell>
                                   </TableRow>
                                 ))}
                               </TableBody>
