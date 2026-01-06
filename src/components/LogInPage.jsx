@@ -135,8 +135,8 @@ const LoginPage = ({
           
           {/* Footer */}
           <footer className="text-center text-sm text-[#b8b89d] mt-8">
-            <p>&copy; 2025 Jasaan AgriTech . All rights reserved.</p>
-            <p className="mt-1">Barangay Agricultural Management System</p>
+            <p>&copy; 2026 Jasaan AgriTech . All rights reserved.</p>
+           
           </footer>
         </div>
       </div>
@@ -145,4 +145,5 @@ const LoginPage = ({
 };
 
 export default LoginPage;
+
 
