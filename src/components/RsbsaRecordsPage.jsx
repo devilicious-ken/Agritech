@@ -528,7 +528,14 @@ const RsbsaRecordsPage = () => {
             if (!isNew && currentItems.some(ci => ci.id === item.id)) {
               await ApiService.updateResource(table, item.id, itemData);
             } else {
-              await ApiService.createResource(table, itemData);
+              // Use the correct API method based on table name
+              if (table === 'crops') {
+                await ApiService.createCrops([itemData]);
+              } else if (table === 'livestock') {
+                await ApiService.createLivestock([itemData]);
+              } else if (table === 'poultry') {
+                await ApiService.createPoultry([itemData]);
+              }
             }
           }
         };

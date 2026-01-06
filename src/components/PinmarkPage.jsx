@@ -118,16 +118,11 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
       const farmersWithPositions = [];
 
       registrants?.forEach((registrant) => {
-        // ✅ Find a parcel with valid coordinates
-        const parcelWithLocation = registrant.farm_parcels?.find(p => p.latitude && p.longitude);
+        // ✅ Find ALL parcels with valid coordinates (not just first one)
+        const parcelsWithLocation = registrant.farm_parcels?.filter(p => p.latitude && p.longitude) || [];
 
         // SKIP if no valid location found
-        if (!parcelWithLocation) return;
-
-        const position = {
-          lat: parcelWithLocation.latitude,
-          lng: parcelWithLocation.longitude
-        };
+        if (parcelsWithLocation.length === 0) return;
 
         const address = registrant.addresses?.[0];
         const purok = address?.purok || 'Unknown Purok';
@@ -135,33 +130,45 @@ export default function PinMarkMap({ onMarkerClick, selectedFarmerId, searchTerm
         const purokKey = `${purok}, ${barangay}`;
 
         const crops = registrant.crops?.map(c => c.name) || [];
-        const farmSize = parcelWithLocation.total_farm_area_ha
-          ? `${parcelWithLocation.total_farm_area_ha} ha`
-          : 'N/A';
 
-        farmersWithPositions.push({
-          id: registrant.reference_no || registrant.id,
-          name: `${registrant.first_name} ${registrant.middle_name || ''} ${registrant.surname}`.trim(),
-          position: position,
-          purok: purok,
-          barangay: barangay,
-          purokKey: purokKey,
-          address: `${purok}, ${barangay}`, // Added address property
-          crops: crops.length > 0 ? crops : ['N/A'],
-          size: farmSize,
-          imageUrl: parcelWithLocation.image_url, // Pass image URL
-          contact: registrant.mobile_number || 'N/A',
-          dateRegistered: new Date(registrant.created_at).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          }),
-          status: 'Active',
-          fullData: registrant
+        // ✅ CREATE A MARKER FOR EACH PARCEL WITH COORDINATES
+        parcelsWithLocation.forEach((parcel, index) => {
+          const position = {
+            lat: parcel.latitude,
+            lng: parcel.longitude
+          };
+
+          const farmSize = parcel.total_farm_area_ha
+            ? `${parcel.total_farm_area_ha} ha`
+            : 'N/A';
+
+          farmersWithPositions.push({
+            id: `${registrant.reference_no || registrant.id}-parcel-${index + 1}`,
+            originalId: registrant.reference_no || registrant.id,
+            parcelIndex: index,
+            name: `${registrant.first_name} ${registrant.middle_name || ''} ${registrant.surname}`.trim(),
+            position: position,
+            purok: purok,
+            barangay: barangay,
+            purokKey: purokKey,
+            address: `${purok}, ${barangay}`,
+            crops: crops.length > 0 ? crops : ['N/A'],
+            size: farmSize,
+            imageUrl: parcel.image_url,
+            contact: registrant.mobile_number || 'N/A',
+            dateRegistered: new Date(registrant.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            }),
+            status: 'Active',
+            parcel: parcel, // Store the specific parcel
+            fullData: registrant
+          });
         });
       });
 
-      console.log(`✅ Generated ${farmersWithPositions.length} real farmer markers`);
+      console.log(`✅ Generated ${farmersWithPositions.length} farm parcel markers (including multiple parcels per farmer)`);
       setMarkers(farmersWithPositions);
 
     } catch (err) {

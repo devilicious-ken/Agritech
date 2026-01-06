@@ -27,6 +27,7 @@ const MapPage = () => {
   const [error, setError] = useState(null);
   const [selectedPinFarmer, setSelectedPinFarmer] = useState(null); // ← NEW
   const [farmPhoto, setFarmPhoto] = useState(null); // ← NEW
+  const [selectedParcelIndex, setSelectedParcelIndex] = useState(0); // ← NEW: For Parcel Hopping
 
   // ✅ Map mode state
   const [mapMode, setMapMode] = useState('purok'); // 'purok' or 'farm'
@@ -39,8 +40,9 @@ const MapPage = () => {
   /* ---- callback passed to PinMarkMap ---- */
   const handlePinSelect = (farmer) => {
     setSelectedPinFarmer(farmer);
+    // Set the parcel index based on which parcel was clicked
+    setSelectedParcelIndex(farmer.parcelIndex !== undefined ? farmer.parcelIndex : 0);
     setFarmPhoto(null); // reset photo
-    /* you can fetch a real photo here if you have one */
   };
 
   const fetchRegistrantsData = async () => {
@@ -57,7 +59,16 @@ const MapPage = () => {
           surname,
           first_name,
           middle_name,
+          extension_name,
+          sex,
+          date_of_birth,
+          civil_status,
+          spouse_name,
           mobile_number,
+          emergency_contact_name,
+          emergency_contact_phone,
+          government_id_type,
+          government_id_number,
           created_at,
           addresses (
             barangay,
@@ -66,7 +77,8 @@ const MapPage = () => {
             province
           ),
           crops (
-            name
+            name,
+            corn_type
           ),
           livestock (
             animal,
@@ -80,10 +92,20 @@ const MapPage = () => {
             activity
           ),
           farm_parcels (
+            id,
+            farm_location,
             total_farm_area_ha,
+            ownership_document,
+            ownership,
+            within_ancestral_domain,
+            agrarian_reform_beneficiary,
             image_url,
             latitude,
             longitude
+          ),
+          financial_infos (
+            tin_number,
+            profession
           )
         `)
         .is('deleted_at', null);
@@ -207,9 +229,27 @@ const MapPage = () => {
 
   const currentData = purokData[selectedPurok] || { farmers: [] };
 
-  // ✅ Get all farmers for Farm Map mode - only those with valid coordinates
+  // ✅ Get all farmers for Farm Map mode - CREATE ENTRY FOR EACH PARCEL WITH COORDINATES
   const allFarmers = Object.values(purokData).flatMap(purok =>
-    purok.farmers.filter(f => f.type === 'Farmer' && f.hasValidCoordinates === true)
+    purok.farmers
+      .filter(f => f.type === 'Farmer')
+      .flatMap(farmer => {
+        // If farmer has multiple parcels with coordinates, create separate entry for each
+        const parcelsWithCoords = farmer.fullData?.farm_parcels?.filter(p => p.latitude && p.longitude) || [];
+        
+        if (parcelsWithCoords.length === 0) return [];
+        
+        return parcelsWithCoords.map((parcel, idx) => ({
+          ...farmer,
+          // Add parcel-specific identifier
+          id: `${farmer.id}-parcel-${idx + 1}`,
+          originalId: farmer.id, // Keep original ID for reference
+          parcelIndex: idx,
+          parcel: parcel, // Store the specific parcel
+          size: parcel.total_farm_area_ha ? `${parcel.total_farm_area_ha} ha` : 'N/A',
+          hasValidCoordinates: true
+        }));
+      })
   );
 
   // ✅ Filter based on mode and filter type
@@ -336,9 +376,13 @@ const MapPage = () => {
                     />
                   ) : (
                     <PinMarkMap
-                      onMarkerClick={handlePinSelect}   // ← new name to avoid clash
-                      selectedFarmerId={selectedPinFarmer?.id}
-                      searchTerm={searchTerm} // ← Pass search term to map
+                      onMarkerClick={handlePinSelect}
+                      selectedFarmerId={
+                        selectedPinFarmer?.originalId 
+                          ? `${selectedPinFarmer.originalId}-parcel-${selectedParcelIndex + 1}`
+                          : selectedPinFarmer?.id
+                      }
+                      searchTerm={searchTerm}
                     />
                   )}
                 </ClientOnly>
@@ -382,13 +426,34 @@ const MapPage = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {/*  >>>  PIN SELECTED – FULL DETAIL  <<<  */}
+              {/*  >>> PIN SELECTED – FULL DETAIL  <<<  */}
               {mapMode === 'farm' && selectedPinFarmer && (
                 <div className="space-y-4">
+                  {/* Parcel Hopping Dropdown */}
+                  {selectedPinFarmer.fullData?.farm_parcels && selectedPinFarmer.fullData.farm_parcels.length > 1 && (
+                    <div>
+                      <label className="text-muted-foreground text-sm mb-2 block">
+                        <i className="fas fa-layer-group mr-2"></i>Select Farm Parcel
+                      </label>
+                      <select
+                        value={selectedParcelIndex}
+                        onChange={(e) => setSelectedParcelIndex(Number(e.target.value))}
+                        className="w-full rounded-md px-3 py-2 bg-muted border border-border text-foreground focus:ring-2 focus:ring-green-600 focus:border-green-600 outline-none cursor-pointer"
+                      >
+                        {selectedPinFarmer.fullData.farm_parcels.map((parcel, idx) => (
+                          <option key={idx} value={idx}>
+                            Parcel {idx + 1} - {parcel.total_farm_area_ha || 'N/A'} ha
+                            {parcel.farm_location ? ` (${parcel.farm_location})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   {/* Farm photo placeholder */}
                   <div className="relative h-48 w-full rounded-lg overflow-hidden bg-muted border border-border">
-                    {selectedPinFarmer.imageUrl ? (
-                      <img src={selectedPinFarmer.imageUrl} alt="Farm" className="h-full w-full object-cover" />
+                    {selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.image_url ? (
+                      <img src={selectedPinFarmer.fullData.farm_parcels[selectedParcelIndex].image_url} alt="Farm" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-muted-foreground">
                         <i className="fas fa-image text-5xl" />
@@ -396,7 +461,7 @@ const MapPage = () => {
                     )}
                   </div>
 
-                  {/* Same grid as the old modal */}
+                  {/* Parcel-specific grid */}
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <label className="text-muted-foreground">RSBSA Number</label>
@@ -423,17 +488,43 @@ const MapPage = () => {
                       <p className="text-foreground">{selectedPinFarmer.contact}</p>
                     </div>
                     <div>
-                      <label className="text-muted-foreground">Farm Size</label>
-                      <p className="text-foreground">{selectedPinFarmer.size}</p>
+                      <label className="text-muted-foreground">Parcel Size</label>
+                      <p className="text-foreground">
+                        {selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.total_farm_area_ha || 'N/A'} ha
+                      </p>
                     </div>
 
+                    {selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.farm_location && (
+                      <div className="col-span-2">
+                        <label className="text-muted-foreground">Farm Location</label>
+                        <p className="text-foreground">{selectedPinFarmer.fullData.farm_parcels[selectedParcelIndex].farm_location}</p>
+                      </div>
+                    )}
+
+                    {selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.ownership && (
+                      <div>
+                        <label className="text-muted-foreground">Ownership</label>
+                        <p className="text-foreground">{selectedPinFarmer.fullData.farm_parcels[selectedParcelIndex].ownership}</p>
+                      </div>
+                    )}
+
+                    {(selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.latitude && 
+                      selectedPinFarmer.fullData?.farm_parcels?.[selectedParcelIndex]?.longitude) && (
+                      <div className="col-span-2">
+                        <label className="text-muted-foreground">Coordinates</label>
+                        <p className="text-foreground font-mono text-xs">
+                          {selectedPinFarmer.fullData.farm_parcels[selectedParcelIndex].latitude.toFixed(6)}, {selectedPinFarmer.fullData.farm_parcels[selectedParcelIndex].longitude.toFixed(6)}
+                        </p>
+                      </div>
+                    )}
+
                     <div className="col-span-2">
-                      <label className="text-muted-foreground">Crops</label>
+                      <label className="text-muted-foreground">Crops/Commodities</label>
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {selectedPinFarmer.crops?.[0] !== 'N/A'
-                          ? selectedPinFarmer.crops.map((c, i) => (
+                        {selectedPinFarmer.crops && selectedPinFarmer.crops.length > 0 && selectedPinFarmer.crops[0] !== 'N/A'
+                          ? selectedPinFarmer.crops.map((crop, i) => (
                             <Badge key={i} className="bg-[#333] text-muted-foreground">
-                              {c}
+                              {crop}
                             </Badge>
                           ))
                           : <span className="text-muted-foreground">No crops listed</span>}
@@ -452,12 +543,22 @@ const MapPage = () => {
                       variant="outline"
                       onClick={() => {
                         setSelectedPinFarmer(null);
-                        // Verify if we need to manually trigger map reset via ref or prop
+                        setSelectedParcelIndex(0);
                       }}
                       className="border-[#444] bg-transparent hover:bg-[#333] text-muted-foreground"
                     >
                       <i className="fas fa-arrow-left mr-2" />
                       Back to list
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setSelectedFarmer(selectedPinFarmer);
+                        setShowViewModal(true);
+                      }}
+                      className="bg-blue-600 hover:bg-blue-700 text-foreground"
+                    >
+                      <i className="fas fa-info-circle mr-2" />
+                      View Details
                     </Button>
                     <Button
                       onClick={() =>
