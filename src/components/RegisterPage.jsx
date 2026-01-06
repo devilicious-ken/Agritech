@@ -562,7 +562,7 @@ const handleSubmit = async () => {
               parcel_info_id: parcelInfoId,  // ✅ Links to parcel_info
               name: info.crop_name,
               value_text: info.size ? `${info.size} ha` : null,
-              corn_type: info.crop_name === 'Corn' ? (info.corn_type || null) : null
+              corn_type: info.crop_name === 'Corn' && info.corn_type ? info.corn_type.toLowerCase() : null
             });
           } else if (info.crop_commodity === 'Livestock' && info.animal_name) {
             livestockFromParcels.push({
@@ -600,7 +600,7 @@ const handleSubmit = async () => {
         registrant_id: registrant.id,
         name: 'Corn',
         value_text: cornValue,
-        corn_type: cornType || null
+        corn_type: cornType ? cornType.toLowerCase() : null
       });
     }
     otherCrops.forEach(crop => {
@@ -872,7 +872,11 @@ const handleSubmit = async () => {
     'Coffee', 'Rubber', 'Cashew', 'Sugarcane', 'Rice', 'Abaca', 'Cacao', 'Tobacco'
   ];
   
-  const cornTypeOptions = ['Yellow', 'White'];
+  
+  const cornTypeOptions = [
+    { value: 'yellow', label: 'Yellow' },
+    { value: 'white', label: 'White' }
+  ];
   const governmentIdOptions = ['PhilID / ePhilID', 'GSIS', 'SSS', 'PhilHealth', 'Voter\'s ID', 'Driver\'s License', 'PRC License', 'Passport', 'Senior Citizen ID', 'PWD ID', 'Postal ID', 'TIN ID', 'Barangay ID', 'Company ID', 'School ID'];
   const sourceFundsOptions = ['Personal Savings', 'Family Support', 'Agricultural Income', 'Remittance', 'Loan', 'Government Assistance', 'Pension', 'Business Income'];
   
@@ -1912,8 +1916,8 @@ const renderFarmDataTab = () => (
                             >
                               <option value="">Select Type</option>
                               {cornTypeOptions.map((type) => (
-                                <option key={type} value={type}>
-                                  {type}
+                                <option key={type.value} value={type.value}>
+                                  {type.label}
                                 </option>
                               ))}
                             </select>
@@ -2227,8 +2231,6 @@ const renderFinancialTab = () => (
     className="w-full h-10 px-3 py-2 bg-card border border-gray-700/30 dark:border-gray-700/30 rounded-md text-foreground"
   >
     <option value="">Select</option>
-     <option value="farming">Farming</option>
-    <option value="fishing">Fishing</option>
     <option value="salary">Salary</option>
     <option value="business">Business</option>
     <option value="remittance">Remittance</option>
