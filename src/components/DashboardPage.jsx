@@ -40,6 +40,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
     animalsDataByPurok: {},
     cropDensityByArea: {},
     productionSummary: {},
+    availableYears: [],
     loading: true
   });
 
@@ -64,6 +65,17 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         const femaleFarmers = farmers.filter(r => r.sex?.toLowerCase() === 'female').length;
         const maleFisherfolks = fisherfolks.filter(r => r.sex?.toLowerCase() === 'male').length;
         const femaleFisherfolks = fisherfolks.filter(r => r.sex?.toLowerCase() === 'female').length;
+
+        // Calculate available years from data
+        const uniqueYears = new Set();
+        registrants.forEach(r => {
+          if (r.created_at && !r.deleted_at) {
+            uniqueYears.add(new Date(r.created_at).getFullYear());
+          }
+        });
+        // Ensure current year is always available
+        uniqueYears.add(new Date().getFullYear());
+        const availableYears = Array.from(uniqueYears).sort((a, b) => b - a);
         
         // Calculate monthly registration trends for selected year
         const monthlyData = {
@@ -136,6 +148,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           if (!productionByArea[barangay]) {
             productionByArea[barangay] = { crops: 0, animals: 0 };
           }
+          // For crops, we count instances/parcels
           productionByArea[barangay].crops++;
         });
         
@@ -160,7 +173,8 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           if (!productionByArea[barangay]) {
             productionByArea[barangay] = { crops: 0, animals: 0 };
           }
-          productionByArea[barangay].animals++;
+          // Sum head counts for animals
+          productionByArea[barangay].animals += (animal.head_count || 1);
         });
         
         // Process poultry (uses 'bird' field)
@@ -183,7 +197,8 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           if (!productionByArea[barangay]) {
             productionByArea[barangay] = { crops: 0, animals: 0 };
           }
-          productionByArea[barangay].animals++;
+          // Sum head counts for poultry
+          productionByArea[barangay].animals += (bird.head_count || 1);
         });
         
         // Calculate top 5 puroks by registrant count for selected year
@@ -316,7 +331,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
               crops: {
                 rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
                 corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
-                others: { count: 0, area: 0 }
+                others: {}
               },
               livestock: {},
               poultry: {},
@@ -339,7 +354,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
               productionSummary[barangay].crops.corn.yellow.count++;
             }
           } else {
-            productionSummary[barangay].crops.others.count++;
+            // Other specific crops - store individually
+            if (!productionSummary[barangay].crops.others[cropName]) {
+              productionSummary[barangay].crops.others[cropName] = { count: 0, area: 0 };
+            }
+            productionSummary[barangay].crops.others[cropName].count++;
           }
         });
         
@@ -354,7 +373,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                 crops: {
                   rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
                   corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
-                  others: { count: 0, area: 0 }
+                  others: {}
                 },
                 livestock: {},
                 poultry: {},
@@ -384,18 +403,45 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           }
         });
         
+        // Allocate remaining area (non-rice) to corn and others based on their proportions
+        Object.keys(productionSummary).forEach(barangay => {
+          const summary = productionSummary[barangay];
+          
+          // Calculate rice area
+          const riceArea = summary.crops.rice.irrigated.area + summary.crops.rice.rainfed.area;
+          
+          // Remaining area for corn and others
+          const remainingArea = summary.totalArea - riceArea;
+          
+          if (remainingArea > 0) {
+            // Count non-rice crops
+            const cornYellowCount = summary.crops.corn.yellow.count;
+            const cornWhiteCount = summary.crops.corn.white.count;
+            const othersCount = Object.values(summary.crops.others).reduce((sum, o) => sum + o.count, 0);
+            const totalNonRiceCrops = cornYellowCount + cornWhiteCount + othersCount;
+            
+            if (totalNonRiceCrops > 0) {
+              // Allocate area proportionally based on crop counts
+              summary.crops.corn.yellow.area = (remainingArea * cornYellowCount / totalNonRiceCrops);
+              summary.crops.corn.white.area = (remainingArea * cornWhiteCount / totalNonRiceCrops);
+              
+              // Allocate to each "other" crop proportionally
+              Object.keys(summary.crops.others).forEach(cropName => {
+                const cropCount = summary.crops.others[cropName].count;
+                summary.crops.others[cropName].area = (remainingArea * cropCount / totalNonRiceCrops);
+              });
+            }
+          }
+        });
+        
         // Group livestock by barangay and type
         activeLivestock.forEach(animal => {
           const { barangay } = getLocation(animal.registrant_id);
-          const animalType = animal.animal || 'Others';
+          const animalType = animal.animal || 'Unknown';
           
           if (!productionSummary[barangay]) {
             productionSummary[barangay] = {
-              crops: {
-                rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
-                corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
-                others: { count: 0, area: 0 }
-              },
+              crops: {},
               livestock: {},
               poultry: {},
               totalArea: 0
@@ -411,15 +457,11 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
         // Group poultry by barangay and type
         activePoultry.forEach(bird => {
           const { barangay } = getLocation(bird.registrant_id);
-          const birdType = bird.bird || 'Others';
+          const birdType = bird.bird || 'Unknown';
           
           if (!productionSummary[barangay]) {
             productionSummary[barangay] = {
-              crops: {
-                rice: { irrigated: { count: 0, area: 0 }, rainfed: { count: 0, area: 0 } },
-                corn: { yellow: { count: 0, area: 0 }, white: { count: 0, area: 0 } },
-                others: { count: 0, area: 0 }
-              },
+              crops: {},
               livestock: {},
               poultry: {},
               totalArea: 0
@@ -432,56 +474,6 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           productionSummary[barangay].poultry[birdType] += (bird.head_count || 1);
         });
         
-        // Calculate production density (crops per hectare) for each category
-        Object.keys(productionSummary).forEach(barangay => {
-          const summary = productionSummary[barangay];
-          
-          // Rice densities
-          if (summary.crops.rice.irrigated.area > 0) {
-            summary.crops.rice.irrigated.density = 
-              (summary.crops.rice.irrigated.count / summary.crops.rice.irrigated.area).toFixed(2);
-          }
-          if (summary.crops.rice.rainfed.area > 0) {
-            summary.crops.rice.rainfed.density = 
-              (summary.crops.rice.rainfed.count / summary.crops.rice.rainfed.area).toFixed(2);
-          }
-          
-          // Corn densities  
-          if (summary.crops.corn.yellow.area > 0) {
-            summary.crops.corn.yellow.density = 
-              (summary.crops.corn.yellow.count / summary.crops.corn.yellow.area).toFixed(2);
-          }
-          if (summary.crops.corn.white.area > 0) {
-            summary.crops.corn.white.density = 
-              (summary.crops.corn.white.count / summary.crops.corn.white.area).toFixed(2);
-          }
-        });
-        
-        // Allocate remaining area (non-rice) to corn and others based on their proportions
-        Object.keys(productionSummary).forEach(barangay => {
-          const summary = productionSummary[barangay];
-          
-          // Calculate rice area
-          const riceArea = summary.crops.rice.irrigated.area + summary.crops.rice.rainfed.area;
-          
-          // Remaining area for corn and others
-          const remainingArea = summary.totalArea - riceArea;
-          
-          if (remainingArea > 0) {
-            // Count non-rice crops
-            const cornYellowCount = summary.crops.corn.yellow.count;
-            const cornWhiteCount = summary.crops.corn.white.count;
-            const othersCount = summary.crops.others.count;
-            const totalNonRiceCrops = cornYellowCount + cornWhiteCount + othersCount;
-            
-            if (totalNonRiceCrops > 0) {
-              // Allocate area proportionally based on crop counts
-              summary.crops.corn.yellow.area = (remainingArea * cornYellowCount / totalNonRiceCrops);
-              summary.crops.corn.white.area = (remainingArea * cornWhiteCount / totalNonRiceCrops);
-              summary.crops.others.area = (remainingArea * othersCount / totalNonRiceCrops);
-            }
-          }
-        });
         
         setDashboardData({
           totalFarmers: farmers.length,
@@ -502,6 +494,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
           animalsDataByPurok,
           cropDensityByArea,
           productionSummary,
+          availableYears,
           loading: false
         });
       } catch (error) {
@@ -1245,9 +1238,13 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
               className="px-3 py-1 bg-[#252525] border border-[#3B3B3B] rounded-md text-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
-                <option key={year} value={year}>{year}</option>
-              ))}
+              {dashboardData.availableYears?.length > 0 ? (
+                dashboardData.availableYears.map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))
+              ) : (
+                <option value={new Date().getFullYear()}>{new Date().getFullYear()}</option>
+              )}
             </select>
           </div>
         </CardHeader>
@@ -1461,8 +1458,13 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                       const cornWhiteHa = data.crops.corn.white.area || 0;
                       const cornWhiteProduction = (cornWhiteHa * 4).toFixed(1);
                       
-                      // Others
-                      const othersHa = data.crops.others.area || 0;
+                      // Others - sum all from others object
+                      let othersHa = 0;
+                      if (data.crops.others) {
+                        Object.values(data.crops.others).forEach(other => {
+                          othersHa += (other.area || 0);
+                        });
+                      }
                       const othersProduction = (othersHa * 4).toFixed(1);
                       
                       // Update totals
@@ -1519,7 +1521,7 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                     // Add total row
                     rows.push(
                       <TableRow key="total" className="border-t-2 border-blue-500 bg-muted/30">
-                        <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
+                        <TableCell className="text-foreground font-bold sticky left-0 bg-muted">
                           Total
                         </TableCell>
                         <TableCell className="text-foreground font-bold text-center">
@@ -1574,114 +1576,141 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
             <div className="overflow-x-auto rounded-md border-0">
               <Table>
                 <TableHeader className="bg-muted">
-                  <TableRow>
-                    <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 min-w-[50px]">
-                      Barangay
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center border-r border-border"
-                      colSpan="3"
-                    >
-                      Livestock
-                    </TableHead>
-                    <TableHead
-                      className="text-muted-foreground text-center"
-                      colSpan="3"
-                    >
-                      Poultry
-                    </TableHead>
-                  </TableRow>
-                  <TableRow>
-                    <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10"></TableHead>
-                    <TableHead className="text-muted-foreground text-center">
-                      Cow
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center">
-                      Pig
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center border-r border-border">
-                      Others
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center">
-                      Chicken
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center">
-                      Duck
-                    </TableHead>
-                    <TableHead className="text-muted-foreground text-center">
-                      Others
-                    </TableHead>
-                  </TableRow>
+                  {(() => {
+                    // Extract all unique livestock and poultry names
+                    const allLivestock = new Set();
+                    const allPoultry = new Set();
+                    
+                    Object.values(dashboardData.productionSummary || {}).forEach(summary => {
+                       if (summary.livestock) {
+                         Object.keys(summary.livestock).forEach(name => allLivestock.add(name));
+                       }
+                       if (summary.poultry) {
+                         Object.keys(summary.poultry).forEach(name => allPoultry.add(name));
+                       }
+                    });
+                    
+                    const sortedLivestock = Array.from(allLivestock).sort();
+                    const sortedPoultry = Array.from(allPoultry).sort();
+                    
+                    // Allow outer scope access
+                    // Note: In React render scope, we can't easily export variables to siblings without context or recalculating
+                    // So we'll recalculate in the second row rendering or separate this logic if possible.
+                    // For now, simpler to duplicate the set extraction for clean JSX structure
+                    
+                    return (
+                      <>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10 min-w-[150px]">
+                            Barangay
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-l border-border"
+                            colSpan={sortedLivestock.length || 1}
+                          >
+                            Livestock
+                          </TableHead>
+                          <TableHead
+                            className="text-muted-foreground text-center border-l border-border"
+                            colSpan={sortedPoultry.length || 1}
+                          >
+                            Poultry
+                          </TableHead>
+                        </TableRow>
+                        <TableRow>
+                          <TableHead className="text-muted-foreground sticky left-0 bg-muted z-10"></TableHead>
+                          {sortedLivestock.length > 0 ? (
+                            sortedLivestock.map(name => (
+                              <TableHead key={`l-${name}`} className="text-muted-foreground text-center border-l border-border px-4 min-w-[100px]">
+                                {name}
+                              </TableHead>
+                            ))
+                          ) : (
+                             <TableHead className="text-muted-foreground text-center border-l border-border">No Data</TableHead>
+                          )}
+                          
+                          {sortedPoultry.length > 0 ? (
+                            sortedPoultry.map(name => (
+                              <TableHead key={`p-${name}`} className="text-muted-foreground text-center border-l border-border px-4 min-w-[100px]">
+                                {name}
+                              </TableHead>
+                            ))
+                          ) : (
+                             <TableHead className="text-muted-foreground text-center border-l border-border">No Data</TableHead>
+                          )}
+                        </TableRow>
+                      </>
+                    );
+                  })()}
                 </TableHeader>
                 <TableBody>
                   {(() => {
-                    const barangays = Object.keys(dashboardData.productionSummary);
+                    const barangays = Object.keys(dashboardData.productionSummary || {}).sort();
                     
                     if (barangays.length === 0) {
                       return (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                             No livestock or poultry data available
                           </TableCell>
                         </TableRow>
                       );
                     }
+
+                    // Recalculate column headers for row mapping
+                    const allLivestock = new Set();
+                    const allPoultry = new Set();
+                    Object.values(dashboardData.productionSummary || {}).forEach(summary => {
+                       if (summary.livestock) Object.keys(summary.livestock).forEach(name => allLivestock.add(name));
+                       if (summary.poultry) Object.keys(summary.poultry).forEach(name => allPoultry.add(name));
+                    });
+                    const sortedLivestock = Array.from(allLivestock).sort();
+                    const sortedPoultry = Array.from(allPoultry).sort();
                     
-                    let totalCow = 0;
-                    let totalPig = 0;
-                    let totalLivestockOthers = 0;
-                    let totalChicken = 0;
-                    let totalDuck = 0;
-                    let totalPoultryOthers = 0;
+                    // Initialize totals
+                    const livestockTotals = {};
+                    const poultryTotals = {};
+                    sortedLivestock.forEach(name => livestockTotals[name] = 0);
+                    sortedPoultry.forEach(name => poultryTotals[name] = 0);
                     
                     const rows = barangays.map((barangay, idx) => {
                       const data = dashboardData.productionSummary[barangay];
-                      
-                      // Livestock counts
-                      const cow = data.livestock['Cow'] || data.livestock['Cattle'] || 0;
-                      const pig = data.livestock['Pig'] || data.livestock['Swine'] || 0;
-                      const livestockOthers = Object.keys(data.livestock)
-                        .filter(k => !['Cow', 'Cattle', 'Pig', 'Swine'].includes(k))
-                        .reduce((sum, k) => sum + data.livestock[k], 0);
-                      
-                      // Poultry counts
-                      const chicken = data.poultry['Chicken'] || 0;
-                      const duck = data.poultry['Duck'] || 0;
-                      const poultryOthers = Object.keys(data.poultry)
-                        .filter(k => !['Chicken', 'Duck'].includes(k))
-                        .reduce((sum, k) => sum + data.poultry[k], 0);
-                      
-                      // Update totals
-                      totalCow += cow;
-                      totalPig += pig;
-                      totalLivestockOthers += livestockOthers;
-                      totalChicken += chicken;
-                      totalDuck += duck;
-                      totalPoultryOthers += poultryOthers;
                       
                       return (
                         <TableRow key={idx} className="border-b border-border hover:bg-muted/20 transition-colors">
                           <TableCell className="text-foreground sticky left-0 bg-card font-medium">
                             {barangay}
                           </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {cow.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {pig.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center border-r border-border">
-                            {livestockOthers.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {chicken.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {duck.toLocaleString()}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-center">
-                            {poultryOthers.toLocaleString()}
-                          </TableCell>
+                          
+                          {/* Livestock Columns */}
+                          {sortedLivestock.length > 0 ? (
+                            sortedLivestock.map(name => {
+                              const count = data.livestock[name] || 0;
+                              livestockTotals[name] += count;
+                              return (
+                                <TableCell key={`l-${name}`} className="text-muted-foreground text-center border-l border-border">
+                                  {count > 0 ? count.toLocaleString() : '-'}
+                                </TableCell>
+                              );
+                            })
+                          ) : (
+                            <TableCell className="text-center">-</TableCell>
+                          )}
+                          
+                          {/* Poultry Columns */}
+                          {sortedPoultry.length > 0 ? (
+                            sortedPoultry.map(name => {
+                              const count = data.poultry[name] || 0;
+                              poultryTotals[name] += count; // Accumulate totals
+                              return (
+                                <TableCell key={`p-${name}`} className="text-muted-foreground text-center border-l border-border">
+                                  {count > 0 ? count.toLocaleString() : '-'}
+                                </TableCell>
+                              );
+                            })
+                          ) : (
+                             <TableCell className="text-center">-</TableCell>
+                          )}
                         </TableRow>
                       );
                     });
@@ -1692,24 +1721,28 @@ const DashboardPage = ({ user, isSidebarCollapsed }) => {
                         <TableCell className="text-foreground font-bold sticky left-0 bg-card/0">
                           Total
                         </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalCow.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalPig.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center border-r border-border">
-                          {totalLivestockOthers.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalChicken.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalDuck.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-foreground font-bold text-center">
-                          {totalPoultryOthers.toLocaleString()}
-                        </TableCell>
+                        
+                        {/* Livestock Totals */}
+                        {sortedLivestock.length > 0 ? (
+                            sortedLivestock.map(name => (
+                              <TableCell key={`l-${name}`} className="text-foreground font-bold text-center border-l border-border">
+                                {livestockTotals[name] > 0 ? livestockTotals[name].toLocaleString() : '-'}
+                              </TableCell>
+                            ))
+                        ) : (
+                            <TableCell className="text-center border-l border-border">-</TableCell>
+                        )}
+                        
+                         {/* Poultry Totals */}
+                         {sortedPoultry.length > 0 ? (
+                            sortedPoultry.map(name => (
+                              <TableCell key={`p-${name}`} className="text-foreground font-bold text-center border-l border-border">
+                                {poultryTotals[name] > 0 ? poultryTotals[name].toLocaleString() : '-'}
+                              </TableCell>
+                            ))
+                        ) : (
+                            <TableCell className="text-center border-l border-border">-</TableCell>
+                        )}
                       </TableRow>
                     );
                     

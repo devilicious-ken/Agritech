@@ -8,12 +8,14 @@ import { Progress } from '@/components/ui/progress';
 import * as XLSX from 'xlsx';
 import ApiService from '../services/api';
 import ExportModal from './ExportModal';
+import PDFExportModal from './PDFExportModal';
 
 const ImportPage = () => {
   // Export states
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showPDFExportModal, setShowPDFExportModal] = useState(false);
   const [allRegistrants, setAllRegistrants] = useState([]);
 
   // Import states
@@ -645,6 +647,18 @@ const ImportPage = () => {
     }
   };
 
+  const handleOpenPDFExportModal = async () => {
+    try {
+      setExportError(null);
+      const registrants = await ApiService.getRegistrants();
+      setAllRegistrants(registrants || []);
+      setShowPDFExportModal(true);
+    } catch (error) {
+      console.error('Error fetching data for PDF export:', error);
+      setExportError('Failed to load data for PDF export');
+    }
+  };
+
   const handleExportCSV = async ({ selectedColumns, registryFilter, cropFilter }) => {
     try {
       setIsExporting(true);
@@ -1103,7 +1117,10 @@ const ImportPage = () => {
                 </div>
                 <h3 className="text-foreground font-medium mb-2">PDF Reports</h3>
                 <p className="text-muted-foreground text-sm mb-4">Generate formatted reports with charts and tables</p>
-                <Button className="bg-red-600 hover:bg-red-700 text-white !rounded-button whitespace-nowrap">
+                <Button 
+                  onClick={handleOpenPDFExportModal}
+                  className="bg-red-600 hover:bg-red-700 text-white !rounded-button whitespace-nowrap"
+                >
                   <i className="fas fa-file-export mr-2"></i> Export PDF
                 </Button>
               </CardContent>
@@ -1149,6 +1166,13 @@ const ImportPage = () => {
         onClose={() => setShowExportModal(false)}
         onExport={handleExportCSV}
         availableColumns={AVAILABLE_COLUMNS}
+        allRegistrants={allRegistrants}
+      />
+
+      {/* PDF Export Modal */}
+      <PDFExportModal
+        show={showPDFExportModal}
+        onClose={() => setShowPDFExportModal(false)}
         allRegistrants={allRegistrants}
       />
     </div>
