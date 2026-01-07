@@ -157,7 +157,9 @@ const handlePermanentDelete = async () => {
   const totalActivityPages = Math.ceil(filteredActivityLogs.length / recordsPerPage);
 
   // Pagination for deleted records
-  const currentDeletedRecords = filteredDeletedRecords.slice(indexOfFirstActivity, indexOfLastActivity);
+  const indexOfFirstDeleted = indexOfFirstActivity;
+  const indexOfLastDeleted = indexOfLastActivity;
+  const currentDeletedRecords = filteredDeletedRecords.slice(indexOfFirstDeleted, indexOfLastDeleted);
   const totalDeletedPages = Math.ceil(filteredDeletedRecords.length / recordsPerPage);
 
   const getActionBadgeColor = (action) => {
@@ -717,73 +719,75 @@ const handlePermanentDelete = async () => {
 
       {/* View Modal */}
       {showViewModal && selectedRecord && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <Card className="bg-card border shadow-xl max-w-2xl w-full">
-            <CardHeader className="flex flex-row items-center justify-between border-b border-border">
-              <CardTitle className="text-foreground">Record Details</CardTitle>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <Card className="bg-gray-800 border border-gray-700 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-gray-700 bg-gray-800/95 sticky top-0 z-10">
+              <CardTitle className="text-white">Record Details</CardTitle>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowViewModal(false)}
-                className="border-border bg-transparent hover:bg-accent text-muted-foreground"
+                className="border-gray-600 bg-transparent hover:bg-gray-700 text-gray-300"
               >
                 <i className="fas fa-times"></i>
               </Button>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-muted-foreground text-sm">Reference Number</label>
-                  <p className="text-foreground font-mono">{selectedRecord.reference_no || 'N/A'}</p>
+            <ScrollArea className="max-h-[calc(90vh-120px)]">
+              <CardContent className="p-6 space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Reference Number</label>
+                    <p className="text-white font-mono mt-1">{selectedRecord.reference_no || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Type</label>
+                    <p className="mt-1">
+                      <Badge className={selectedRecord.registry === 'farmer' ? 'bg-green-900/50 text-green-300' : 'bg-blue-900/50 text-blue-300'}>
+                        {selectedRecord.registry === 'farmer' ? 'Farmer' : 'Fisherfolk'}
+                      </Badge>
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Full Name</label>
+                    <p className="text-white mt-1">{selectedRecord.first_name} {selectedRecord.middle_name} {selectedRecord.surname}</p>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Contact Number</label>
+                    <p className="text-white mt-1">{selectedRecord.mobile_number || 'N/A'}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-gray-400 text-sm font-medium">Address</label>
+                    <p className="text-white mt-1">
+                      {selectedRecord.addresses?.[0] 
+                        ? `${selectedRecord.addresses[0].purok}, ${selectedRecord.addresses[0].barangay}, ${selectedRecord.addresses[0].municipality_city}`
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Deleted On</label>
+                    <p className="text-white mt-1">{formatDateTime(selectedRecord.deleted_at)}</p>
+                  </div>
+                  <div>
+                    <label className="text-gray-400 text-sm font-medium">Time Since Deletion</label>
+                    <p className="text-white mt-1">{formatTimeAgo(selectedRecord.deleted_at)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <label className="text-gray-400 text-sm font-medium">Deletion Reason</label>
+                    <p className="text-white mt-1">{selectedRecord.delete_reason || 'No reason provided'}</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-muted-foreground text-sm">Type</label>
-                  <p>
-                    <Badge className={selectedRecord.registry === 'farmer' ? 'bg-green-900/50 text-green-300' : 'bg-blue-900/50 text-blue-300'}>
-                      {selectedRecord.registry === 'farmer' ? 'Farmer' : 'Fisherfolk'}
-                    </Badge>
-                  </p>
+                <div className="flex gap-2 justify-end pt-4 border-t border-gray-700">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowViewModal(false)}
+                    className="border-gray-600 bg-transparent hover:bg-gray-700 text-gray-300"
+                  >
+                    Close
+                  </Button>
                 </div>
-                <div>
-                  <label className="text-muted-foreground text-sm">Full Name</label>
-                  <p className="text-foreground">{selectedRecord.first_name} {selectedRecord.middle_name} {selectedRecord.surname}</p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-sm">Contact Number</label>
-                  <p className="text-foreground">{selectedRecord.mobile_number || 'N/A'}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-muted-foreground text-sm">Address</label>
-                  <p className="text-foreground">
-                    {selectedRecord.addresses?.[0] 
-                      ? `${selectedRecord.addresses[0].purok}, ${selectedRecord.addresses[0].barangay}, ${selectedRecord.addresses[0].municipality_city}`
-                      : 'N/A'
-                    }
-                  </p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-sm">Deleted On</label>
-                  <p className="text-foreground">{formatDateTime(selectedRecord.deleted_at)}</p>
-                </div>
-                <div>
-                  <label className="text-muted-foreground text-sm">Time Since Deletion</label>
-                  <p className="text-foreground">{formatTimeAgo(selectedRecord.deleted_at)}</p>
-                </div>
-                <div className="col-span-2">
-                  <label className="text-muted-foreground text-sm">Deletion Reason</label>
-                  <p className="text-foreground">{selectedRecord.delete_reason || 'No reason provided'}</p>
-                </div>
-              </div>
-              <div className="flex gap-2 justify-end pt-4 border-t dark:border-border/10 border-border">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowViewModal(false)}
-                  className="border-border bg-transparent hover:bg-muted text-muted-foreground"
-                >
-                  Close
-                </Button>
-              </div>
-            </CardContent>
+              </CardContent>
+            </ScrollArea>
           </Card>
         </div>
       )}
